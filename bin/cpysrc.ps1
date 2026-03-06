@@ -22,24 +22,39 @@ param (
     [string]$PsftpPath = "C:\Program Files\PuTTY\psftp.exe"
 )
 
-# Load shared config
-. "$PSScriptRoot\ibmi-common.ps1"
-$Config = Get-IBMiConfig -Environment $Environment
+# Load config from .ibmi-config.json
+$ConfigPath = Join-Path $PSScriptRoot ".ibmi-config.json"
+if (-not (Test-Path $ConfigPath)) {
+    Write-Host "ERROR: Config file not found. Run setup-ibmi.ps1 first."
+    exit 1
+}
+$RootConfig = Get-Content $ConfigPath -Raw | ConvertFrom-Json
+$EnvName = if ($Environment) { $Environment } else { $RootConfig.DefaultEnvironment }
+if (-not $RootConfig.Environments.PSObject.Properties[$EnvName]) {
+    Write-Host "ERROR: Environment '$EnvName' not found in config."
+    exit 1
+}
+$Config = $RootConfig.Environments.$EnvName
+
+# Decrypt password from config
+$DecryptedPassword = if ($Config.IBMiPassword) {
+    $secure = $Config.IBMiPassword | ConvertTo-SecureString
+    (New-Object System.Net.NetworkCredential '', $secure).Password
+} else { "" }
 
 # Apply param overrides — if explicitly passed, use it; otherwise use config
 if (-not $PSBoundParameters.ContainsKey('IBMiHost'))     { $IBMiHost     = $Config.IBMiHost }
 if (-not $PSBoundParameters.ContainsKey('IBMiUser'))     { $IBMiUser     = $Config.IBMiUser }
-if (-not $PSBoundParameters.ContainsKey('IBMiPassword')) { $IBMiPassword = $Config.IBMiPassword }
+if (-not $PSBoundParameters.ContainsKey('IBMiPassword')) { $IBMiPassword = $DecryptedPassword }
 if (-not $PSBoundParameters.ContainsKey('Library'))      { $Library      = $Config.Library }
 if (-not $PSBoundParameters.ContainsKey('File'))         { $File         = $Config.File }
 
-
-# Build a runtime config hashtable for Invoke-Remote
-$RunConfig = @{
-    IBMiHost     = $IBMiHost
-    IBMiUser     = $IBMiUser
-    IBMiPassword = $IBMiPassword
-    PlinkPath    = $PlinkPath
+# Helper: run a command on IBM i via plink
+function Invoke-Remote {
+    param([string]$Command, [switch]$PassThru)
+    $output = & "$PlinkPath" -batch -pw $IBMiPassword "$IBMiUser@$IBMiHost" $Command 2>&1
+    $output | ForEach-Object { Write-Host "LOG [plink]: $_" }
+    if ($PassThru) { return $output }
 }
 
 Write-Host "=== Starting download of member: $Member ==="
@@ -47,16 +62,13 @@ Write-Host "LOG Library=$Library, File=$File, Member=$Member"
 
 # Step 1: Call CPYSRC to get the source type attribute
 Write-Host "LOG Step 1: Retrieving source member attribute..."
-Invoke-Remote -Command "system ""CALL $($Config.UtilityLibrary)/CPYSRC PARM('$Library' '$File' '$Member')""" -Config $RunConfig
-
+Invoke-Remote -Command "system ""CALL $($Config.UtilityLibrary)/CPYSRC PARM('$Library' '$File' '$Member')"""
 # Step 1b: Export SRCEXT file to .source_ext stream file
 Write-Host "LOG Step 1b: Exporting source type to .source_ext..."
-Invoke-Remote -Command "system ""CPYTOIMPF FROMFILE($($Config.UtilityLibrary)/SRCEXT) TOSTMF('$($Config.HomeDir)/.source_ext') MBROPT(*REPLACE) STMFCCSID(1208) RCDDLM(*CRLF) DTAFMT(*FIXED)""" -Config $RunConfig
-
+Invoke-Remote -Command "system ""CPYTOIMPF FROMFILE($($Config.UtilityLibrary)/SRCEXT) TOSTMF('$($Config.HomeDir)/.source_ext') MBROPT(*REPLACE) STMFCCSID(1208) RCDDLM(*CRLF) DTAFMT(*FIXED)"""
 # Step 2: Read the attribute from .source_ext
 Write-Host "LOG Step 2: Reading .source_ext..."
-$AttrResult = Invoke-Remote -Command "cat $($Config.HomeDir)/.source_ext 2>/dev/null | tr -d '[:space:]'" -Config $RunConfig
-
+$AttrResult = Invoke-Remote -Command "cat $($Config.HomeDir)/.source_ext 2>/dev/null | tr -d '[:space:]'" -PassThru
 if ($AttrResult) {
     $Extension = ($AttrResult | Out-String).Trim().ToLower()
     Write-Host "LOG Source type: $Extension"
@@ -67,8 +79,7 @@ if ($AttrResult) {
 
 # Step 3: Ensure remote source directory exists
 Write-Host "LOG Step 3: Creating remote source directory..."
-Invoke-Remote -Command "mkdir -p $($Config.HomeDir)/source" -Config $RunConfig
-
+Invoke-Remote -Command "mkdir -p $($Config.HomeDir)/source"
 $RemoteStream = "$($Config.HomeDir)/source/$Member.$Extension"
 Write-Host "LOG Remote IFS path: $RemoteStream"
 
@@ -80,8 +91,7 @@ Write-Host "LOG Local path: $LocalPath"
 
 # Step 5: CPYTOSTMF - copy source member to IFS stream file
 Write-Host "LOG Step 5: Converting database member to stream file..."
-Invoke-Remote -Command "system ""CPYTOSTMF FROMMBR('/QSYS.LIB/$Library.LIB/$File.FILE/$Member.MBR') TOSTMF('$RemoteStream') STMFCODPAG(1208) STMFOPT(*REPLACE)""" -Config $RunConfig
-
+Invoke-Remote -Command "system ""CPYTOSTMF FROMMBR('/QSYS.LIB/$Library.LIB/$File.FILE/$Member.MBR') TOSTMF('$RemoteStream') STMFCODPAG(1208) STMFOPT(*REPLACE)"""
 # Step 6: Download via SFTP
 Write-Host "LOG Step 6: Downloading file via SFTP..."
 $SftpCommands = @"

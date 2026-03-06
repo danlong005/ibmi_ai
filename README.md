@@ -19,7 +19,7 @@ cd ibmi
 
 ### 2. Configure your first environment
 
-Run the interactive setup wizard. It will prompt for your IBM i host, user, password, library, and other settings. Your password is encrypted with Windows DPAPI and stored in `~/.ibmi-config.json` (never committed to Git).
+Run the interactive setup wizard. It will prompt for your IBM i host, user, password, library, and other settings. Your password is encrypted with Windows DPAPI and stored in `bin/ibmi-config.json` (never committed to Git).
 
 ```powershell
 pwsh -ExecutionPolicy Bypass -File bin/setup-ibmi.ps1 -Environment dev
@@ -76,6 +76,7 @@ ibmi/
 │   ├── ibmi-common.ps1         # Shared functions (config loader, remote commands)
 │   ├── cpysrc.ps1              # Download source member from IBM i
 │   ├── putsrc.ps1              # Upload source member to IBM i
+│   ├── ibmi-config.json        # Local config (gitignored, created by setup)
 │   └── README.md               # Detailed script documentation
 ├── source/                     # Working source files (downloaded/edited here)
 ├── production_source/          # Production source reference (read-only)
@@ -102,7 +103,7 @@ ibmi/
 
 ## Security
 
-- Credentials are stored locally in `~/.ibmi-config.json` using Windows DPAPI encryption
-- The config file is **not** committed to Git (ensure `~/.ibmi-config.json` is outside the repo)
+- Credentials are stored locally in `bin/ibmi-config.json` using Windows DPAPI encryption
+- The config file lives at `bin/ibmi-config.json` and is excluded via `.gitignore`
 - `source/` and `production_source/` are in `.gitignore` to prevent accidental source commits
 - No plaintext passwords exist anywhere in the repository

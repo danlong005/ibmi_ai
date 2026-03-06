@@ -23,7 +23,7 @@ pwsh -ExecutionPolicy Bypass -File bin/putsrc.ps1 MYPGM
 
 ## Configuration Setup (`setup-ibmi.ps1`)
 
-The setup wizard creates `~/.ibmi-config.json` in your user profile directory. Your password is encrypted with Windows DPAPI, meaning it can only be decrypted by your Windows account on your machine. The config file is safe to leave on disk but should **not** be committed to Git.
+The setup wizard creates `bin/ibmi-config.json` in your user profile directory. Your password is encrypted with Windows DPAPI, meaning it can only be decrypted by your Windows account on your machine. The config file is safe to leave on disk but should **not** be committed to Git.
 
 ### First-time setup — create an environment
 
@@ -140,7 +140,7 @@ Same as `cpysrc.ps1` above.
 
 ## Config File Structure
 
-The config file (`~/.ibmi-config.json`) looks like this:
+The config file (`bin/ibmi-config.json`) looks like this:
 
 ```json
 {
@@ -190,4 +190,4 @@ The password field is a DPAPI-encrypted string that can only be decrypted by the
 | `bin/ibmi-common.ps1` | Shared functions (config loader, remote command wrapper) |
 | `bin/cpysrc.ps1` | Download source member from IBM i |
 | `bin/putsrc.ps1` | Upload source member to IBM i |
-| `~/.ibmi-config.json` | User config (DPAPI-encrypted, do not commit) |
+| `bin/ibmi-config.json` | User config (DPAPI-encrypted, do not commit) |

@@ -4,6 +4,9 @@ production_source/*
 documentation/*
 test_docs/*
 
+# Config file with encrypted credentials
+bin/.ibmi-config.json
+
 # Keep the directories themselves
 !source/.gitkeep
 !production_source/.gitkeep

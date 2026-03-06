@@ -22,24 +22,37 @@ param (
     [string]$PsftpPath = "C:\Program Files\PuTTY\psftp.exe"
 )
 
-# Load shared config
-. "$PSScriptRoot\ibmi-common.ps1"
-$Config = Get-IBMiConfig -Environment $Environment
+# Load config from .ibmi-config.json
+$ConfigPath = Join-Path $PSScriptRoot ".ibmi-config.json"
+if (-not (Test-Path $ConfigPath)) {
+    Write-Host "ERROR: Config file not found. Run setup-ibmi.ps1 first."
+    exit 1
+}
+$RootConfig = Get-Content $ConfigPath -Raw | ConvertFrom-Json
+$EnvName = if ($Environment) { $Environment } else { $RootConfig.DefaultEnvironment }
+if (-not $RootConfig.Environments.PSObject.Properties[$EnvName]) {
+    Write-Host "ERROR: Environment '$EnvName' not found in config."
+    exit 1
+}
+$Config = $RootConfig.Environments.$EnvName
+
+# Decrypt password from config
+$DecryptedPassword = if ($Config.IBMiPassword) {
+    $secure = $Config.IBMiPassword | ConvertTo-SecureString
+    (New-Object System.Net.NetworkCredential '', $secure).Password
+} else { "" }
 
 # Apply param overrides — if explicitly passed, use it; otherwise use config
 if (-not $PSBoundParameters.ContainsKey('IBMiHost'))     { $IBMiHost     = $Config.IBMiHost }
 if (-not $PSBoundParameters.ContainsKey('IBMiUser'))     { $IBMiUser     = $Config.IBMiUser }
-if (-not $PSBoundParameters.ContainsKey('IBMiPassword')) { $IBMiPassword = $Config.IBMiPassword }
+if (-not $PSBoundParameters.ContainsKey('IBMiPassword')) { $IBMiPassword = $DecryptedPassword }
 if (-not $PSBoundParameters.ContainsKey('Library'))      { $Library      = $Config.Library }
 if (-not $PSBoundParameters.ContainsKey('File'))         { $File         = $Config.File }
 
-
-# Build a runtime config hashtable for Invoke-Remote
-$RunConfig = @{
-    IBMiHost     = $IBMiHost
-    IBMiUser     = $IBMiUser
-    IBMiPassword = $IBMiPassword
-    PlinkPath    = $PlinkPath
+# Helper: run a command on IBM i via plink
+function Invoke-Remote {
+    param([string]$Command)
+    & "$PlinkPath" -batch -pw $IBMiPassword "$IBMiUser@$IBMiHost" $Command 2>&1 | ForEach-Object { Write-Host "LOG [plink]: $_" }
 }
 
 # Find the file in the source directory by member name
@@ -70,8 +83,7 @@ Write-Host "LOG Remote IFS path: $RemoteStream"
 
 # Step 1: Ensure remote source directory exists
 Write-Host "LOG Step 1: Creating remote source directory..."
-Invoke-Remote -Command "mkdir -p $($Config.HomeDir)/source" -Config $RunConfig
-
+Invoke-Remote -Command "mkdir -p $($Config.HomeDir)/source"
 # Step 2: Upload file via SFTP
 Write-Host "LOG Step 2: Uploading file via SFTP..."
 $SftpCommands = @"
@@ -88,15 +100,12 @@ Write-Host $SftpCommands
 
 # Step 3: CPYFRMSTMF - copy IFS stream file back to source member
 Write-Host "LOG Step 3: Copying stream file to database member..."
-Invoke-Remote -Command "system ""CPYFRMSTMF FROMSTMF('$RemoteStream') TOMBR('/QSYS.LIB/$Library.LIB/$File.FILE/$Member.MBR') MBROPT(*REPLACE) STMFCODPAG(1208)""" -Config $RunConfig
-
+Invoke-Remote -Command "system ""CPYFRMSTMF FROMSTMF('$RemoteStream') TOMBR('/QSYS.LIB/$Library.LIB/$File.FILE/$Member.MBR') MBROPT(*REPLACE) STMFCODPAG(1208)"""
 # Step 4: Set the source type attribute on the member
 Write-Host "LOG Step 4: Setting source type attribute to $SourceType..."
-Invoke-Remote -Command "system ""CHGPFM FILE($Library/$File) MBR($Member) SRCTYPE($SourceType)""" -Config $RunConfig
-
+Invoke-Remote -Command "system ""CHGPFM FILE($Library/$File) MBR($Member) SRCTYPE($SourceType)"""
 # Step 5: Clean up temp file and remote IFS file
 Remove-Item $TempFile
 Write-Host "LOG Step 5: Cleaning up remote file..."
-Invoke-Remote -Command "rm -f $RemoteStream" -Config $RunConfig
-
+Invoke-Remote -Command "rm -f $RemoteStream"
 Write-Host "=== Upload complete: $Member ($SourceType) ==="

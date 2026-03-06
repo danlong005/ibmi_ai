@@ -17,7 +17,7 @@ param (
     [string]$Remove
 )
 
-$ConfigPath = Join-Path $env:USERPROFILE ".ibmi-config.json"
+$ConfigPath = Join-Path $PSScriptRoot ".ibmi-config.json"
 
 # Load existing config or initialize empty structure
 $RootConfig = $null
