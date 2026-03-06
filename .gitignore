@@ -1,2 +1,6 @@
+!production_source
+!source
+!documentation
 production_source/**
 source/**
+documentation/**
