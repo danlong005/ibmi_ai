@@ -1,6 +1,11 @@
-!production_source
-!source
-!documentation
-production_source/**
-source/**
-documentation/**
+# Ignore files in these directories but keep the directories
+source/*
+production_source/*
+documentation/*
+test_docs/*
+
+# Keep the directories themselves
+!source/.gitkeep
+!production_source/.gitkeep
+!documentation/.gitkeep
+!test_docs/.gitkeep
