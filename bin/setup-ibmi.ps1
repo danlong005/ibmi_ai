@@ -29,7 +29,7 @@ if (Test-Path $ConfigPath) {
 if ($RootConfig -and -not $RootConfig.PSObject.Properties['Environments']) {
     Write-Host "Migrating existing config to multi-environment format..."
     $legacyEnv = @{}
-    foreach ($prop in @('IBMiHost','IBMiUser','IBMiPassword','Library','File','HomeDir','UtilityLibrary')) {
+    foreach ($prop in @('IBMiHost','IBMiUser','IBMiPassword','SSHPort','Library','File','HomeDir','UtilityLibrary')) {
         if ($RootConfig.PSObject.Properties[$prop]) {
             $legacyEnv[$prop] = $RootConfig.$prop
         }
@@ -163,6 +163,11 @@ while (-not $EncryptedPassword) {
     }
 }
 
+$SSHPort = Prompt-Value `
+    -Default $(if ($Existing.SSHPort) { $Existing.SSHPort } else { "22" }) `
+    -Prompt "SSH Port"
+$SSHPort = [int]$SSHPort
+
 $Library = Prompt-Value `
     -Default $(if ($Existing.Library) { $Existing.Library } else { $IBMiUser.ToUpper() }) `
     -Prompt "Library"
@@ -184,6 +189,7 @@ $EnvConfig = [PSCustomObject]@{
     IBMiHost       = $IBMiHost
     IBMiUser       = $IBMiUser
     IBMiPassword   = $EncryptedPassword
+    SSHPort        = $SSHPort
     Library        = $Library.ToUpper()
     File           = $File.ToUpper()
     HomeDir        = $HomeDir
