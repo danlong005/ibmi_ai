@@ -12,6 +12,7 @@ param (
     [string]$IBMiHost,
     [string]$IBMiUser,
     [string]$IBMiPassword,
+    [int]$SSHPort,
 
     [string]$Library,
     [string]$File,
@@ -46,13 +47,14 @@ $DecryptedPassword = if ($Config.IBMiPassword) {
 if (-not $PSBoundParameters.ContainsKey('IBMiHost'))     { $IBMiHost     = $Config.IBMiHost }
 if (-not $PSBoundParameters.ContainsKey('IBMiUser'))     { $IBMiUser     = $Config.IBMiUser }
 if (-not $PSBoundParameters.ContainsKey('IBMiPassword')) { $IBMiPassword = $DecryptedPassword }
+if (-not $PSBoundParameters.ContainsKey('SSHPort'))      { $SSHPort      = if ($Config.SSHPort) { $Config.SSHPort } else { 22 } }
 if (-not $PSBoundParameters.ContainsKey('Library'))      { $Library      = $Config.Library }
 if (-not $PSBoundParameters.ContainsKey('File'))         { $File         = $Config.File }
 
 # Helper: run a command on IBM i via plink
 function Invoke-Remote {
     param([string]$Command, [switch]$PassThru)
-    $output = & "$PlinkPath" -batch -pw $IBMiPassword "$IBMiUser@$IBMiHost" $Command 2>&1
+    $output = & "$PlinkPath" -batch -P $SSHPort -pw $IBMiPassword "$IBMiUser@$IBMiHost" $Command 2>&1
     $output | ForEach-Object { Write-Host "LOG [plink]: $_" }
     if ($PassThru) { return $output }
 }
@@ -105,7 +107,7 @@ $SftpCommands | Out-File -FilePath $TempFile -Encoding ascii
 Write-Host "LOG SFTP batch commands:"
 Write-Host $SftpCommands
 
-& "$PsftpPath" -batch -pw $IBMiPassword "$IBMiUser@$IBMiHost" -b $TempFile 2>&1 | ForEach-Object { Write-Host "LOG [sftp]: $_" }
+& "$PsftpPath" -batch -P $SSHPort -pw $IBMiPassword "$IBMiUser@$IBMiHost" -b $TempFile 2>&1 | ForEach-Object { Write-Host "LOG [sftp]: $_" }
 
 Remove-Item $TempFile
 
