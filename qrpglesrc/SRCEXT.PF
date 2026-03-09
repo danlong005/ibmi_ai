@@ -1,0 +1,4 @@
+                                            UNIQUE
+                R SRCEXTR
+                  SRCTYPE       10A         COLHDG('Source' 'Type')
+                K SRCTYPE
