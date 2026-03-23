@@ -161,9 +161,8 @@ run_remote_capture() {
 }
 
 # Cleanup temp files on exit
-TEMP_FILE=""
 cleanup() {
-    rm -f "$EXPECT_SSH" "$EXPECT_SFTP" "$TEMP_FILE" 2>/dev/null
+    rm -f "$EXPECT_SSH" "$EXPECT_SFTP" 2>/dev/null
 }
 trap cleanup EXIT
 
@@ -178,11 +177,31 @@ run_remote "system \"CALL ${UTIL_LIB}/CPYSRC PARM('${LIBRARY}' '${FILE}' '${MEMB
 echo "LOG Step 1b: Exporting source type to .source_ext..."
 run_remote "system \"CPYTOIMPF FROMFILE(${UTIL_LIB}/SRCEXT) TOSTMF('${HOME_DIR}/.source_ext') MBROPT(*REPLACE) STMFCCSID(1208) RCDDLM(*CRLF) DTAFMT(*FIXED)\""
 
-# Step 2: Read the attribute from .source_ext
-echo "LOG Step 2: Reading .source_ext..."
-ATTR_RESULT=$(run_remote_capture "cat ${HOME_DIR}/.source_ext 2>/dev/null | tr -d '[:space:]'")
-if [[ -n "$ATTR_RESULT" ]]; then
-    EXTENSION=$(echo "$ATTR_RESULT" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+# Step 2: Read the source type using markers to isolate from expect noise
+echo "LOG Step 2: Reading source type..."
+RAW_RESULT=$(run_remote_capture "echo '@@SRCTYPE@@' && cat ${HOME_DIR}/.source_ext && echo '@@END@@'" || true)
+
+EXTENSION=""
+CAPTURE=false
+while IFS= read -r line; do
+    if [[ "$line" == *"@@SRCTYPE@@"* ]]; then
+        CAPTURE=true
+        continue
+    fi
+    if [[ "$line" == *"@@END@@"* ]]; then
+        break
+    fi
+    if $CAPTURE; then
+        clean=$(echo "$line" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+        # Only accept alphanumeric values (valid source types like rpgle, sqlrpgle, clle, etc.)
+        if [[ "$clean" =~ ^[a-z0-9]+$ ]]; then
+            EXTENSION="$clean"
+            break
+        fi
+    fi
+done <<< "$RAW_RESULT"
+
+if [[ -n "$EXTENSION" ]]; then
     echo "LOG Source type: $EXTENSION"
 else
     EXTENSION="txt"
