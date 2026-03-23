@@ -101,6 +101,11 @@ This repo has custom skills for IBM i development:
 - **Member names**: Uppercase, max 10 characters (IBM i object naming rules).
 - **Source file**: All members stored in `ILESRC` source physical file.
 
+## Source Reference
+
+- When looking up source code, check `source/` first (active working files). If not found there, reference `production_source/ilesrc/` as a read-only fallback.
+- Do NOT download source from IBM i unless explicitly told to.
+
 ## Important Notes
 
 - `source/` and `production_source/` are gitignored — source files are not committed
