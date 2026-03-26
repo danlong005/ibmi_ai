@@ -37,10 +37,14 @@ $ResolvedLibrary = if ($Library) { $Library } else { $Config.Library }
 $ResolvedSrcMbr   = if ($SrcMbr)    { $SrcMbr }    else { $TstPgm }
 $ResolvedBndSrvPgm = if ($BndSrvPgm) { $BndSrvPgm } else { $TstPgm -replace '_T$', '' }
 
+# Set $ResolvedLibrary as *CURLIB so its includes take precedence over PRODLIB in *USRLIBL
+$LibList = @('YAJL', 'XMLILIB', 'LIBHTTP', 'PRODLIB', 'RPGUNIT', 'QDEVTOOLS')
+$LibListCmds = "liblist -c $ResolvedLibrary 2>/dev/null; " + (($LibList | ForEach-Object { "liblist -a $_ 2>/dev/null" }) -join '; ')
+
 function Invoke-Remote {
     param([string]$Command)
     Write-Host "Executing: $Command"
-    $FullCommand = "qsh -c `"liblist -a RPGUNIT 2>/dev/null; $Command`""
+    $FullCommand = "qsh -c `"$LibListCmds; $Command`""
     & "$PlinkPath" -batch -P 22 -pw $DecryptedPassword "$IBMiUser@$IBMiHost" $FullCommand 2>&1 | ForEach-Object { Write-Host $_ }
     if ($LASTEXITCODE -ne 0) {
         Write-Host "ERROR: Command failed with exit code $LASTEXITCODE"

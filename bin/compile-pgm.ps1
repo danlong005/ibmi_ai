@@ -1,17 +1,17 @@
-# Compile a service program on IBM i
+# Compile a bound RPG program on IBM i
 #
 # Conventions (all overridable):
-#   Module source member : {SrvPgm}
-#   Binder source member : {SrvPgm}_B
+#   Source member : {Pgm}
+#
+# Use -SqlPgm for SQLRPGLE source (uses CRTSQLRPGI instead of CRTBNDRPG)
 
 param (
-    [Parameter(Mandatory)][string]$SrvPgm,
+    [Parameter(Mandatory)][string]$Pgm,
     [string]$Environment,
     [string]$Library,
-    [string]$ModuleSrc,   # defaults to {SrvPgm}
-    [string]$BndSrc,      # defaults to {SrvPgm}_B
-    [string]$BndDir,      # optional binding directory (e.g. YAJL/YAJL)
-    [switch]$SqlModule    # use CRTSQLRPGI instead of CRTRPGMOD
+    [string]$SrcMbr,    # defaults to {Pgm}
+    [string]$BndDir,    # optional binding directory (e.g. UTILBD)
+    [switch]$SqlPgm     # use CRTSQLRPGI instead of CRTBNDRPG
 )
 
 # Load config
@@ -36,8 +36,7 @@ $IBMiUser = $Config.IBMiUser
 $ResolvedLibrary = if ($Library) { $Library } else { $Config.Library }
 
 # Apply naming conventions
-$ResolvedModuleSrc = if ($ModuleSrc) { $ModuleSrc } else { $SrvPgm }
-$ResolvedBndSrc    = if ($BndSrc)    { $BndSrc }    else { "${SrvPgm}_B" }
+$ResolvedSrcMbr = if ($SrcMbr) { $SrcMbr } else { $Pgm }
 
 # Set $ResolvedLibrary as *CURLIB so its includes take precedence over PRODLIB in *USRLIBL
 $LibList = @('YAJL', 'XMLILIB', 'LIBHTTP', 'PRODLIB', 'RPGUNIT', 'QDEVTOOLS')
@@ -55,23 +54,20 @@ function Invoke-Remote {
     return $true
 }
 
-Write-Host "=== Compiling $SrvPgm Service Program ==="
+Write-Host "=== Compiling $Pgm Program ==="
 Write-Host "Environment: $EnvName  Library: $ResolvedLibrary"
 
-# Step 1: Compile module
-Write-Host "`n--- Step 1: Creating $SrvPgm module ---"
-if ($SqlModule) {
-    $step1 = Invoke-Remote "system 'CRTSQLRPGI OBJ($ResolvedLibrary/$SrvPgm) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedModuleSrc) OBJTYPE(*MODULE) RPGPPOPT(*LVL2) DBGVIEW(*SOURCE)'"
+if ($SqlPgm) {
+    # CRTSQLRPGI does not accept BNDDIR — binding directory must be in Ctl-Opt in source
+    if ($BndDir) { Write-Host "Note: -BndDir ignored for -SqlPgm; specify BndDir in Ctl-Opt in source." }
+    if (-not (Invoke-Remote "system 'CRTSQLRPGI OBJ($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedSrcMbr) OBJTYPE(*PGM) RPGPPOPT(*LVL2) DBGVIEW(*SOURCE)'")) {
+        exit 1
+    }
 } else {
-    $step1 = Invoke-Remote "system 'CRTRPGMOD MODULE($ResolvedLibrary/$SrvPgm) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedModuleSrc) DBGVIEW(*SOURCE)'"
-}
-if (-not $step1) { exit 1 }
-
-# Step 2: Create service program
-Write-Host "`n--- Step 2: Creating $SrvPgm service program ---"
-$BndDirParam = if ($BndDir) { " BNDDIR($BndDir)" } else { "" }
-if (-not (Invoke-Remote "system 'CRTSRVPGM SRVPGM($ResolvedLibrary/$SrvPgm) MODULE($ResolvedLibrary/$SrvPgm) EXPORT(*SRCFILE) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedBndSrc) ACTGRP(*CALLER)$BndDirParam'")) {
-    exit 1
+    $BndDirParam = if ($BndDir) { " BNDDIR($BndDir)" } else { "" }
+    if (-not (Invoke-Remote "system 'CRTBNDRPG PGM($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedSrcMbr) DBGVIEW(*SOURCE)$BndDirParam'")) {
+        exit 1
+    }
 }
 
 Write-Host "`n=== Compilation Complete ==="

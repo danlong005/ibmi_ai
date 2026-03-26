@@ -30,7 +30,10 @@ $ResolvedLibrary = if ($Library) { $Library } else { $Config.Library }
 Write-Host "=== Running Test Suite: $TestProgram ==="
 Write-Host "Environment: $EnvName  Library: $ResolvedLibrary"
 
-$FullCommand = "qsh -c `"liblist -a RPGUNIT 2>/dev/null; system 'RPGUNIT/RUCALLTST TSTPGM($ResolvedLibrary/$TestProgram)'`""
+$LibList = @('YAJL', 'XMLILIB', 'LIBHTTP', 'PRODLIB', 'RPGUNIT', 'QDEVTOOLS')
+$LibListCmds = ($LibList | ForEach-Object { "liblist -a $_ 2>/dev/null" }) -join '; '
+
+$FullCommand = "qsh -c `"$LibListCmds; system 'RPGUNIT/RUCALLTST TSTPGM($ResolvedLibrary/$TestProgram)'`""
 & "$PlinkPath" -batch -P 22 -pw $DecryptedPassword "$IBMiUser@$IBMiHost" $FullCommand 2>&1 | ForEach-Object { Write-Host $_ }
 
 if ($LASTEXITCODE -ne 0) {
