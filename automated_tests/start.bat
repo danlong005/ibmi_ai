@@ -1,1 +1,0 @@
-java -jar .\tn5250j.jar

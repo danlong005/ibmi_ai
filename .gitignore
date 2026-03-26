@@ -3,7 +3,7 @@ source/*
 production_source/*
 documentation/*
 test_docs/*
-automated_tests/scripts/*
+automated_tests/
 
 # Config file with encrypted credentials
 bin/.ibmi-config.json
@@ -13,4 +13,3 @@ bin/.ibmi-config.json
 !production_source/.gitkeep
 !documentation/.gitkeep
 !test_docs/.gitkeep
-!automated_tests/scripts/.gitkeep
