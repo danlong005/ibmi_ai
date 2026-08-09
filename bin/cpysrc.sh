@@ -85,7 +85,6 @@ CONFIG=$(echo "$ROOT_CONFIG" | jq ".Environments[\"$ENV_NAME\"]")
 [[ -z "$LIBRARY" ]]   && LIBRARY=$(echo "$CONFIG" | jq -r '.Library')
 [[ -z "$FILE" ]]      && FILE=$(echo "$CONFIG" | jq -r '.File')
 HOME_DIR=$(echo "$CONFIG" | jq -r '.HomeDir')
-UTIL_LIB=$(echo "$CONFIG" | jq -r '.UtilityLibrary')
 
 # Resolve password: CLI > config (encrypted) > prompt
 if [[ -z "$IBMI_PASSWORD" ]]; then
@@ -169,20 +168,18 @@ trap cleanup EXIT
 echo "=== Starting download of member: $MEMBER ==="
 echo "LOG Library=$LIBRARY, File=$FILE, Member=$MEMBER"
 
-# Step 1: Call CPYSRC to get the source type attribute
-echo "LOG Step 1: Retrieving source member attribute..."
-run_remote "system \"CALL ${UTIL_LIB}/CPYSRC PARM('${LIBRARY}' '${FILE}' '${MEMBER}')\""
+# Step 1: Query QSYS2.SYSPARTITIONSTAT directly for the source type — no need
+# for a UTILLIB/CPYSRC program or SRCEXT file on the IBM i side.
+echo "LOG Step 1: Retrieving source member attribute via SYSPARTITIONSTAT..."
+SQL="SELECT TRIM(SOURCE_TYPE) FROM QSYS2.SYSPARTITIONSTAT WHERE TABLE_SCHEMA='${LIBRARY}' AND TABLE_NAME='${FILE}' AND TABLE_PARTITION='${MEMBER}'"
+QSH_CMD="qsh -c \"db2 \\\"${SQL}\\\"\""
+RAW_RESULT=$(run_remote_capture "echo '@@SRCTYPE@@' && ${QSH_CMD} && echo '@@END@@'" || true)
 
-# Step 1b: Export SRCEXT file to .source_ext stream file
-echo "LOG Step 1b: Exporting source type to .source_ext..."
-run_remote "system \"CPYTOIMPF FROMFILE(${UTIL_LIB}/SRCEXT) TOSTMF('${HOME_DIR}/.source_ext') MBROPT(*REPLACE) STMFCCSID(1208) RCDDLM(*CRLF) DTAFMT(*FIXED)\""
-
-# Step 2: Read the source type using markers to isolate from expect noise
-echo "LOG Step 2: Reading source type..."
-RAW_RESULT=$(run_remote_capture "echo '@@SRCTYPE@@' && cat ${HOME_DIR}/.source_ext && echo '@@END@@'" || true)
-
+# db2 output format: blank, header, dashes, data, blank, "N RECORD(S) SELECTED."
+# Take the first non-empty line AFTER the dashes separator.
 EXTENSION=""
 CAPTURE=false
+FOUND_DASH=false
 while IFS= read -r line; do
     if [[ "$line" == *"@@SRCTYPE@@"* ]]; then
         CAPTURE=true
@@ -192,10 +189,19 @@ while IFS= read -r line; do
         break
     fi
     if $CAPTURE; then
-        clean=$(echo "$line" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
-        # Only accept alphanumeric values (valid source types like rpgle, sqlrpgle, clle, etc.)
-        if [[ "$clean" =~ ^[a-z0-9]+$ ]]; then
-            EXTENSION="$clean"
+        trimmed=$(echo "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+        if ! $FOUND_DASH; then
+            if [[ "$trimmed" =~ ^-+$ ]]; then
+                FOUND_DASH=true
+            fi
+            continue
+        fi
+        if [[ -n "$trimmed" ]]; then
+            clean=$(echo "$trimmed" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+            # Only accept alphanumeric values (valid source types like rpgle, sqlrpgle, clle, etc.)
+            if [[ "$clean" =~ ^[a-z0-9]+$ ]]; then
+                EXTENSION="$clean"
+            fi
             break
         fi
     fi

@@ -21,10 +21,49 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_PATH="$SCRIPT_DIR/.ibmi-config.json"
 
-# Check for required tools
-for cmd in jq openssl; do
+# --- Prerequisite checks ---
+# All bin/*.sh scripts need jq, openssl, and expect. Offer to install
+# anything missing now via Homebrew (macOS) or apt (Linux) rather than
+# letting the user hit a cryptic failure later in cpysrc.sh/putsrc.sh/etc.
+install_prereq() {
+    local pkg="$1"
+    local answer
+    if [[ "$(uname)" == "Darwin" ]]; then
+        if ! command -v brew &>/dev/null; then
+            echo "  Homebrew not found. Install manually: https://brew.sh"
+            return 1
+        fi
+        read -rp "  Install $pkg via Homebrew? (y/n): " answer
+        [[ "$answer" == "y" ]] || return 1
+        brew install "$pkg"
+    elif command -v apt &>/dev/null; then
+        read -rp "  Install $pkg via apt (sudo required)? (y/n): " answer
+        [[ "$answer" == "y" ]] || return 1
+        sudo apt install -y "$pkg"
+    else
+        echo "  No supported package manager found (Homebrew or apt). Install $pkg manually."
+        return 1
+    fi
+}
+
+MISSING_PREREQS=()
+for cmd in jq openssl expect; do
     if ! command -v "$cmd" &>/dev/null; then
-        echo "ERROR: $cmd is required."
+        MISSING_PREREQS+=("$cmd")
+    fi
+done
+
+if [[ ${#MISSING_PREREQS[@]} -gt 0 ]]; then
+    echo "WARNING: missing required tools: ${MISSING_PREREQS[*]}"
+    for pkg in "${MISSING_PREREQS[@]}"; do
+        install_prereq "$pkg" || echo "  Skipped $pkg — install it manually before using the other bin/*.sh scripts."
+    done
+    echo ""
+fi
+
+for cmd in jq openssl expect; do
+    if ! command -v "$cmd" &>/dev/null; then
+        echo "ERROR: $cmd is still required. Install it, then re-run this script."
         exit 1
     fi
 done
@@ -181,7 +220,13 @@ fi
 echo ""
 echo "--- Environment: $ENVIRONMENT ---"
 
-IBMI_HOST=$(prompt_value "IBM i Host" "${EXISTING_HOST:-as400.example.com}")
+IBMI_HOST=$(prompt_value "IBM i Host" "$EXISTING_HOST")
+
+if [[ -z "$IBMI_HOST" ]]; then
+    echo "ERROR: IBMiHost is required."
+    exit 1
+fi
+
 IBMI_USER=$(prompt_value "IBM i User" "$EXISTING_USER")
 
 if [[ -z "$IBMI_USER" ]]; then
@@ -229,7 +274,7 @@ LIBRARY=$(echo "$LIBRARY" | tr '[:lower:]' '[:upper:]')
 SOURCE_FILE=$(prompt_value "Source File" "${EXISTING_FILE:-ILESRC}")
 SOURCE_FILE=$(echo "$SOURCE_FILE" | tr '[:lower:]' '[:upper:]')
 HOME_DIR=$(prompt_value "Home Directory" "${EXISTING_HOME:-/home/$IBMI_USER_UPPER}")
-UTILITY_LIBRARY=$(prompt_value "Utility Library (for CPYSRC etc.)" "${EXISTING_UTILLIB:-$IBMI_USER_UPPER}")
+UTILITY_LIBRARY=$(prompt_value "Utility Library (reserved for future use)" "${EXISTING_UTILLIB:-$IBMI_USER_UPPER}")
 UTILITY_LIBRARY=$(echo "$UTILITY_LIBRARY" | tr '[:lower:]' '[:upper:]')
 
 # Build and save environment entry

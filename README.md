@@ -47,12 +47,12 @@ Connect once manually so the host key is cached:
 
 **PowerShell (Windows):**
 ```powershell
-plink as400.example.com
+plink your-ibmi-host.example.com
 ```
 
 **Bash (macOS/Linux):**
 ```bash
-ssh as400.example.com
+ssh your-ibmi-host.example.com
 ```
 
 Accept the key when prompted, then close the session.
@@ -117,6 +117,38 @@ bash bin/putsrc.sh MYPGM -e prod
 
 See [bin/README.md](bin/README.md) for full script documentation, all parameters, and troubleshooting.
 
+## Claude Code Skills
+
+If you're working in [Claude Code](https://claude.com/claude-code), this repo defines skills (`.claude/skills/`) and slash commands (`.claude/commands/`) so you can drive the workflow above conversationally — ask in plain language ("download MYPGM from qa", "compile MYPGM") and Claude picks the right skill and runs the underlying script for you.
+
+### Code-generation skills
+
+These generate source following this repo's conventions. They don't call any scripts — they're prompt-only.
+
+| Skill | Purpose |
+|-------|---------|
+| `/rpg` | Generate ILE RPG programs, service programs, modules, test programs, header files |
+| `/cl` | Generate or review OPM (`.clp`) and ILE (`.clle`) CL programs |
+| `/dds` | Generate or validate DDS source (PF, LF, DSPF, PRTF) |
+
+### Script-invoking skills
+
+These wrap the `bin/` scripts. `/cpysrc` and `/putsrc` detect Windows vs. macOS/Linux and run the matching `.ps1`/`.sh` script; the compile/test skills currently shell out to the PowerShell (`.ps1`) scripts.
+
+| Skill | Runs |
+|-------|------|
+| `/cpysrc <MEMBER> [-e env]` | `bin/cpysrc.ps1` or `bin/cpysrc.sh` — download a source member |
+| `/putsrc <MEMBER> [-e env]` | `bin/putsrc.ps1` or `bin/putsrc.sh` — upload a source member |
+| `/cmppgm <NAME> ...` | `bin/compile-pgm.ps1` — compile a bound RPG/SQLRPGLE program |
+| `/cmpcl <NAME> ...` | `bin/compile-cl.ps1` — compile a CL program |
+| `/cmpdspf <NAME> ...` | `bin/compile-dspf.ps1` — compile a display file |
+| `/cmpsrv <NAME> ...` | `bin/compile-srvpgm.ps1` — compile a service program |
+| `/cmptst <NAME> ...` | `bin/compile-tst.ps1` — compile an RPGUnit test program |
+| `/runtst <TSTPGM> ...` | `bin/run-tests.ps1` — run an RPGUnit test suite |
+| `/mdtopdf <file.md>` | `bin/md_to_pdf.py` — convert a markdown file to PDF |
+
+Each skill shows the script's full output and, on failure, summarizes the error and suggests a fix rather than just dumping the raw log.
+
 ## Project Structure
 
 ```
@@ -124,11 +156,18 @@ ibmi/
 ├── bin/                        # Scripts and tooling
 │   ├── setup-ibmi.ps1          # Config setup wizard (PowerShell)
 │   ├── setup-ibmi.sh           # Config setup wizard (Bash)
-│   ├── ibmi-common.ps1         # Shared functions (PowerShell)
 │   ├── cpysrc.ps1              # Download source member (PowerShell)
 │   ├── cpysrc.sh               # Download source member (Bash)
 │   ├── putsrc.ps1              # Upload source member (PowerShell)
 │   ├── putsrc.sh               # Upload source member (Bash)
+│   ├── compile-pgm.ps1/.sh     # Compile a bound RPG program
+│   ├── compile-cl.ps1/.sh      # Compile a CL program
+│   ├── compile-dspf.ps1/.sh    # Compile a display file
+│   ├── compile-srvpgm.ps1/.sh  # Compile a service program
+│   ├── compile-tst.ps1/.sh     # Compile an RPGUnit test program
+│   ├── run-tests.ps1/.sh       # Run an RPGUnit test suite
+│   ├── run-cl.ps1/.sh          # Call a CL program by name
+│   ├── get-zip.ps1/.sh         # List/download .zip files from IBM i
 │   ├── .ibmi-config.json       # Local config (gitignored, created by setup)
 │   └── README.md               # Detailed script documentation
 ├── source/                     # Working source files (downloaded/edited here)
@@ -153,16 +192,6 @@ ibmi/
 | `.pf` | Physical file (DDS) |
 | `.lf` | Logical file (DDS) |
 | `.sql` | SQL DDL/DML |
-
-## Journaling Setup
-
-Before using the SRCEXT file, you must set up journaling in the LONGDM1 library. Run these commands on IBM i:
-
-```
-CRTJRNRCV JRNRCV(LONGDM1/JRNRCV)
-CRTJRN JRN(LONGDM1/JRN) JRNRCV(LONGDM1/JRNRCV)
-STRJRNPF FILE(LONGDM1/SRCEXT) JRN(LONGDM1/JRN)
-```
 
 ## Security
 

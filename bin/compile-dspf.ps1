@@ -7,6 +7,7 @@ param (
     [Parameter(Mandatory)][string]$DspF,
     [string]$Environment,
     [string]$Library,
+    [string]$File,      # source physical file; defaults to config's File, then ILESRC
     [string]$SrcMbr     # defaults to {DspF}
 )
 
@@ -30,6 +31,7 @@ $PlinkPath = "C:\Program Files\PuTTY\plink.exe"
 $IBMiHost = $Config.IBMiHost
 $IBMiUser = $Config.IBMiUser
 $ResolvedLibrary = if ($Library) { $Library } else { $Config.Library }
+$ResolvedFile = if ($File) { $File } elseif ($Config.File) { $Config.File } else { "ILESRC" }
 
 # Apply naming conventions
 $ResolvedSrcMbr = if ($SrcMbr) { $SrcMbr } else { $DspF }
@@ -53,7 +55,7 @@ function Invoke-Remote {
 Write-Host "=== Compiling $DspF Display File ==="
 Write-Host "Environment: $EnvName  Library: $ResolvedLibrary"
 
-if (-not (Invoke-Remote "system 'CRTDSPF FILE($ResolvedLibrary/$DspF) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedSrcMbr)'")) {
+if (-not (Invoke-Remote "system 'CRTDSPF FILE($ResolvedLibrary/$DspF) SRCFILE($ResolvedLibrary/$ResolvedFile) SRCMBR($ResolvedSrcMbr)'")) {
     exit 1
 }
 

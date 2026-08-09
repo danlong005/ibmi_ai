@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-IBM i (iSeries/AS400) source management repository for Example Corp This is a **source sync toolkit** — not a traditional build project. Source members are edited locally and compiled on IBM i using native commands (CRTBNDRPG, CRTBNDCL, CRTDSPF, etc.).
+IBM i (iSeries/AS400) source management repository. This is a **source sync toolkit** — not a traditional build project. Source members are edited locally and compiled on IBM i using native commands (CRTBNDRPG, CRTBNDCL, CRTDSPF, etc.).
 
-The repository contains ~24,000 production source files and PowerShell scripts for transferring source between Windows and IBM i systems.
+The repository contains ~24,000 production source files and scripts (PowerShell for Windows, Bash for macOS/Linux) for transferring source between local machines and IBM i systems.
 
 ## Key Commands
 
-### Source Management (PowerShell)
+### Source Management (PowerShell — Windows)
 
 All scripts require PowerShell 7 (`pwsh`), not Windows PowerShell 5.1.
 
@@ -26,16 +26,42 @@ pwsh -ExecutionPolicy Bypass -File bin/cpysrc.ps1 MBRNAME -Environment qa
 pwsh -ExecutionPolicy Bypass -File bin/putsrc.ps1 MBRNAME -Environment prod
 
 # Override library for a single call
-pwsh -ExecutionPolicy Bypass -File bin/cpysrc.ps1 MBRNAME -Library PRODLIB
+pwsh -ExecutionPolicy Bypass -File bin/cpysrc.ps1 MBRNAME -Library YOURLIB
 
 # Configure environments
 pwsh -ExecutionPolicy Bypass -File bin/setup-ibmi.ps1 -Environment dev
 pwsh -ExecutionPolicy Bypass -File bin/setup-ibmi.ps1 -List
 ```
 
-### Compilation (on IBM i via /create skill)
+### Source Management (Bash — macOS/Linux)
 
-Objects are compiled on IBM i using the `create` shell script at `/z/bin/create`. Use the `/create` skill to invoke compilation.
+Requires `jq`, `openssl`, and `expect` (`brew install jq openssl expect`). Uses `ssh`/`sftp` instead of PuTTY. Shares the same `bin/.ibmi-config.json` as the PowerShell scripts, but each platform encrypts the password with its own key — run the setup script matching the platform you're on.
+
+```bash
+# Download / upload source member
+bash bin/cpysrc.sh MBRNAME
+bash bin/putsrc.sh MBRNAME
+
+# Target a specific environment
+bash bin/cpysrc.sh MBRNAME -e qa
+bash bin/putsrc.sh MBRNAME -e prod
+
+# Override library for a single call
+bash bin/cpysrc.sh MBRNAME -l YOURLIB
+
+# Configure environments
+bash bin/setup-ibmi.sh -e dev
+bash bin/setup-ibmi.sh -l
+```
+
+### Compilation
+
+Objects are compiled on IBM i over SSH using the `bin/compile-*.ps1` / `bin/compile-*.sh` scripts (bound RPG programs, CL programs, display files, service programs, RPGUnit test programs), plus `bin/run-tests.ps1`/`.sh` to run a compiled RPGUnit suite. See `bin/README.md` for full parameters. Example:
+
+```bash
+bash bin/compile-pgm.sh MBRNAME -e dev
+bash bin/run-tests.sh MBRNAME_T -e dev
+```
 
 ## Architecture
 
@@ -43,19 +69,21 @@ Objects are compiled on IBM i using the `create` shell script at `/z/bin/create`
 
 - **`source/`** — Working directory for downloaded/edited source files (gitignored)
 - **`production_source/ilesrc/`** — Read-only production source reference (~24,000 files, gitignored)
-- **`bin/`** — PowerShell tooling: `cpysrc.ps1`, `putsrc.ps1`, `setup-ibmi.ps1`, `ibmi-common.ps1`
+- **`bin/`** — PowerShell (`.ps1`) and Bash (`.sh`) tooling: `setup-ibmi`, `cpysrc`, `putsrc`, `compile-pgm`, `compile-cl`, `compile-dspf`, `compile-srvpgm`, `compile-tst`, `run-tests`, `run-cl`, `get-zip`
 - **`documentation/`** — Project planning docs including repository split plan
 - **`test_docs/`** — Test documentation
 
 ### Environment Mapping
 
+Environments (dev, qa, prod, etc.) are user-defined and map to IBM i libraries via `bin/.ibmi-config.json` — see `bin/setup-ibmi.ps1 -List` / `bin/setup-ibmi.sh -l` for what's configured locally. Example mapping:
+
 | Environment | IBM i Library | Purpose |
 |-------------|---------------|---------|
-| dev | LONGDM | Active development |
+| dev | DEVLIB | Active development |
 | qa | QALIB | QA testing |
 | prod | PRODLIB | Production |
 
-Config stored in `bin/.ibmi-config.json` (DPAPI-encrypted, gitignored). Host: `as400.example.com`.
+Config stored in `bin/.ibmi-config.json` (encrypted, gitignored) — host, user, and library are all set per-environment via the setup script, not hardcoded.
 
 ### Source File Types
 
@@ -78,8 +106,8 @@ Config stored in `bin/.ibmi-config.json` (DPAPI-encrypted, gitignored). Host: `a
 1. Download source from IBM i: `/cpysrc MBRNAME`
 2. Edit locally in `source/` directory
 3. Upload back to IBM i: `/putsrc MBRNAME`
-4. Compile on IBM i: `/create`
-5. Test on IBM i
+4. Compile on IBM i: `bash bin/compile-pgm.sh MBRNAME` (or the matching `compile-*` script for the object type)
+5. Test on IBM i: `bash bin/run-tests.sh MBRNAME_T` (RPGUnit)
 
 ## Claude Code Skills
 
@@ -90,8 +118,8 @@ This repo has custom skills for IBM i development:
 - **`/cl`** — Generate CL programs (OPM .clp and ILE .clle)
 - **`/cpysrc`** — Download source member from IBM i
 - **`/putsrc`** — Upload source member to IBM i
-- **`/create`** — Compile an ILE object on IBM i
-- **`/create_test_doc`** — Generate test documentation for changes
+
+Compiling and testing are done via the `bin/compile-*` and `bin/run-tests` scripts directly (see Compilation above), not through a skill.
 
 ## IBM i Coding Conventions
 
@@ -110,5 +138,5 @@ This repo has custom skills for IBM i development:
 
 - `source/` and `production_source/` are gitignored — source files are not committed
 - The `bin/.ibmi-config.json` contains encrypted credentials — never commit
-- PuTTY (`plink`/`psftp`) is required for IBM i connectivity
+- PuTTY (`plink`/`psftp`) is required for IBM i connectivity on Windows; `ssh`/`sftp`/`expect` on macOS/Linux
 - The repo is planned for future split into 16 domain-specific repositories (see `documentation/Git_Project_Split_Plan.md`)

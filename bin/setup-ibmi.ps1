@@ -17,6 +17,81 @@ param (
     [string]$Remove
 )
 
+# --- Prerequisite checks ---
+function Install-Winget {
+    $answer = Read-Host "  winget (Windows Package Manager) is not installed. Install it now? (y/n)"
+    if ($answer -ne 'y') { return $false }
+    try {
+        Write-Host "  Fetching latest winget release info..."
+        $release  = Invoke-RestMethod -Uri "https://api.github.com/repos/microsoft/winget-cli/releases/latest" -UseBasicParsing
+        $bundle   = $release.assets | Where-Object { $_.name -like "*.msixbundle" } | Select-Object -First 1
+        if (-not $bundle) {
+            Write-Host "  Could not locate winget installer bundle. Install manually from the Microsoft Store (App Installer)."
+            return $false
+        }
+        $tmpPath = Join-Path $env:TEMP $bundle.name
+        Write-Host "  Downloading $($bundle.name)..."
+        Invoke-WebRequest -Uri $bundle.browser_download_url -OutFile $tmpPath -UseBasicParsing
+        Write-Host "  Installing..."
+        Add-AppxPackage -Path $tmpPath
+        Remove-Item $tmpPath -ErrorAction SilentlyContinue
+        # Refresh PATH so winget is usable in this session
+        $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH","Machine") + ";" +
+                    [System.Environment]::GetEnvironmentVariable("PATH","User")
+        if (Get-Command winget -ErrorAction SilentlyContinue) {
+            Write-Host "  winget installed successfully."
+            return $true
+        }
+        Write-Host "  winget installed. You may need to open a new terminal for PATH to update."
+        return $true
+    } catch {
+        Write-Host "  Failed to install winget: $_"
+        Write-Host "  Install manually from the Microsoft Store (search 'App Installer')."
+        return $false
+    }
+}
+
+function Install-WithWinget {
+    param([string]$PackageId, [string]$DisplayName)
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        $ok = Install-Winget
+        if (-not $ok -or -not (Get-Command winget -ErrorAction SilentlyContinue)) { return $false }
+    }
+    $answer = Read-Host "  Install $DisplayName via winget? (y/n)"
+    if ($answer -ne 'y') { return $false }
+    Write-Host "  Running: winget install --id $PackageId -e"
+    winget install --id $PackageId -e
+    return $true
+}
+
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    Write-Host "ERROR: PowerShell 7 (pwsh) is required. You are running PowerShell $($PSVersionTable.PSVersion)."
+    Write-Host "       DPAPI encryption will not work correctly in PowerShell 5.x."
+    $installed = Install-WithWinget -PackageId "Microsoft.PowerShell" -DisplayName "PowerShell 7"
+    if ($installed) {
+        Write-Host ""
+        Write-Host "PowerShell 7 installed. Please close this window and re-run setup using 'pwsh'."
+    } else {
+        Write-Host "  Install from: https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows"
+    }
+    exit 1
+}
+
+$PlinkDefault = "C:\Program Files\PuTTY\plink.exe"
+$PsftpDefault = "C:\Program Files\PuTTY\psftp.exe"
+$plinkFound   = (Get-Command plink -ErrorAction SilentlyContinue) -or (Test-Path $PlinkDefault)
+$psftpFound   = (Get-Command psftp -ErrorAction SilentlyContinue) -or (Test-Path $PsftpDefault)
+if (-not $plinkFound -or -not $psftpFound) {
+    Write-Host "WARNING: PuTTY (plink.exe / psftp.exe) not found. Required by cpysrc.ps1 and putsrc.ps1."
+    $installed = Install-WithWinget -PackageId "PuTTY.PuTTY" -DisplayName "PuTTY"
+    if ($installed) {
+        Write-Host "  PuTTY installed. You may need to open a new terminal for PATH to update."
+    } else {
+        Write-Host "  Install from: https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html"
+    }
+    Write-Host ""
+}
+
 $ConfigPath = Join-Path $PSScriptRoot ".ibmi-config.json"
 
 # Load existing config or initialize empty structure
@@ -116,8 +191,13 @@ Write-Host ""
 Write-Host "--- Environment: $Environment ---"
 
 $IBMiHost = Prompt-Value `
-    -Default $(if ($Existing.IBMiHost) { $Existing.IBMiHost } else { "as400.example.com" }) `
+    -Default $(if ($Existing.IBMiHost) { $Existing.IBMiHost } else { "" }) `
     -Prompt "IBM i Host"
+
+if (-not $IBMiHost) {
+    Write-Host "ERROR: IBMiHost is required."
+    exit 1
+}
 
 $IBMiUser = Prompt-Value `
     -Default $(if ($Existing.IBMiUser) { $Existing.IBMiUser } else { "" }) `
@@ -182,7 +262,7 @@ $HomeDir = Prompt-Value `
 
 $UtilityLibrary = Prompt-Value `
     -Default $(if ($Existing.UtilityLibrary) { $Existing.UtilityLibrary } else { $IBMiUser.ToUpper() }) `
-    -Prompt "Utility Library (for CPYSRC etc.)"
+    -Prompt "Utility Library (reserved for future use)"
 
 # Build environment entry
 $EnvConfig = [PSCustomObject]@{

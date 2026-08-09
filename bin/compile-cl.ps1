@@ -9,6 +9,7 @@ param (
     [Parameter(Mandatory)][string]$Pgm,
     [string]$Environment,
     [string]$Library,
+    [string]$File,      # source physical file; defaults to config's File, then ILESRC
     [string]$SrcMbr,    # defaults to {Pgm}
     [switch]$IleCl      # use CRTBNDCL instead of CRTCLPGM
 )
@@ -33,6 +34,7 @@ $PlinkPath = "C:\Program Files\PuTTY\plink.exe"
 $IBMiHost = $Config.IBMiHost
 $IBMiUser = $Config.IBMiUser
 $ResolvedLibrary = if ($Library) { $Library } else { $Config.Library }
+$ResolvedFile = if ($File) { $File } elseif ($Config.File) { $Config.File } else { "ILESRC" }
 
 # Apply naming conventions
 $ResolvedSrcMbr = if ($SrcMbr) { $SrcMbr } else { $Pgm }
@@ -57,11 +59,11 @@ Write-Host "=== Compiling $Pgm CL Program ==="
 Write-Host "Environment: $EnvName  Library: $ResolvedLibrary"
 
 if ($IleCl) {
-    if (-not (Invoke-Remote "system 'CRTBNDCL PGM($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedSrcMbr) DBGVIEW(*SOURCE)'")) {
+    if (-not (Invoke-Remote "system 'CRTBNDCL PGM($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/$ResolvedFile) SRCMBR($ResolvedSrcMbr) DBGVIEW(*SOURCE)'")) {
         exit 1
     }
 } else {
-    if (-not (Invoke-Remote "system 'CRTCLPGM PGM($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedSrcMbr)'")) {
+    if (-not (Invoke-Remote "system 'CRTCLPGM PGM($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/$ResolvedFile) SRCMBR($ResolvedSrcMbr)'")) {
         exit 1
     }
 }

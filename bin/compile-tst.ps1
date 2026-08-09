@@ -8,6 +8,7 @@ param (
     [Parameter(Mandatory)][string]$TstPgm,
     [string]$Environment,
     [string]$Library,
+    [string]$File,        # source physical file; defaults to config's File, then ILESRC
     [string]$SrcMbr,      # defaults to {TstPgm}
     [string]$BndSrvPgm    # defaults to {TstPgm} with _T stripped
 )
@@ -32,6 +33,7 @@ $PlinkPath = "C:\Program Files\PuTTY\plink.exe"
 $IBMiHost = $Config.IBMiHost
 $IBMiUser = $Config.IBMiUser
 $ResolvedLibrary = if ($Library) { $Library } else { $Config.Library }
+$ResolvedFile = if ($File) { $File } elseif ($Config.File) { $Config.File } else { "ILESRC" }
 
 # Apply naming conventions
 $ResolvedSrcMbr   = if ($SrcMbr)    { $SrcMbr }    else { $TstPgm }
@@ -56,9 +58,22 @@ function Invoke-Remote {
 Write-Host "=== Compiling $TstPgm Test Program ==="
 Write-Host "Environment: $EnvName  Library: $ResolvedLibrary"
 
-if (-not (Invoke-Remote "system 'RPGUNIT/RUCRTTST TSTPGM($ResolvedLibrary/$TstPgm) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedSrcMbr) BNDSRVPGM($ResolvedLibrary/$ResolvedBndSrvPgm) BNDDIR(RPGUNIT/IRPGUNIT) DBGVIEW(*SOURCE)'")) {
-    exit 1
-}
+# Step 1: Compile SQLRPGLE test source as a module
+# Uses CRTSQLRPGI directly (same approach as service program modules) rather
+# than RUCRTTST, which uses OPTION(*SYSVAL) and does not play well with **free
+# source when RPGPPOPT(*LVL2) expands the iRPGUnit TESTCASE include.
+Write-Host "`n--- Step 1: Creating $TstPgm module ---"
+$step1Cmd = "system 'CRTSQLRPGI OBJ($ResolvedLibrary/$TstPgm) SRCFILE($ResolvedLibrary/$ResolvedFile) SRCMBR($ResolvedSrcMbr) OBJTYPE(*MODULE) COMMIT(*NONE) DBGVIEW(*SOURCE)'"
+if (-not (Invoke-Remote $step1Cmd)) { exit 1 }
+
+# Step 2: Bind into a service program for RPGUnit
+# EXPORT(*ALL) so RUCALLTST can discover SETUP/TEARDOWN/test_* procedures.
+# BNDDIR(RPGUNIT/IRPGUNIT) pulls in the iRPGUnit assertion service programs.
+# BNDSRVPGM adds the service program under test (omitted when *NONE).
+Write-Host "`n--- Step 2: Creating $TstPgm service program ---"
+$BndSrvPgmClause = if ($ResolvedBndSrvPgm -eq '*NONE') { '' } else { " BNDSRVPGM($ResolvedLibrary/$ResolvedBndSrvPgm)" }
+$step2Cmd = "system 'CRTSRVPGM SRVPGM($ResolvedLibrary/$TstPgm) MODULE($ResolvedLibrary/$TstPgm) EXPORT(*ALL)$BndSrvPgmClause BNDDIR(RPGUNIT/IRPGUNIT) ACTGRP(*CALLER)'"
+if (-not (Invoke-Remote $step2Cmd)) { exit 1 }
 
 Write-Host "`n=== Compilation Complete ==="
 Write-Host "`nTo run tests, execute:"

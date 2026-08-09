@@ -62,17 +62,24 @@ function Invoke-Remote {
 Write-Host "=== Starting download of member: $Member ==="
 Write-Host "LOG Library=$Library, File=$File, Member=$Member"
 
-# Step 1: Call CPYSRC to get the source type attribute
-Write-Host "LOG Step 1: Retrieving source member attribute..."
-Invoke-Remote -Command "system ""CALL $($Config.UtilityLibrary)/CPYSRC PARM('$Library' '$File' '$Member')"""
-# Step 1b: Export SRCEXT file to .source_ext stream file
-Write-Host "LOG Step 1b: Exporting source type to .source_ext..."
-Invoke-Remote -Command "system ""CPYTOIMPF FROMFILE($($Config.UtilityLibrary)/SRCEXT) TOSTMF('$($Config.HomeDir)/.source_ext') MBROPT(*REPLACE) STMFCCSID(1208) RCDDLM(*CRLF) DTAFMT(*FIXED)"""
-# Step 2: Read the attribute from .source_ext
-Write-Host "LOG Step 2: Reading .source_ext..."
-$AttrResult = Invoke-Remote -Command "cat $($Config.HomeDir)/.source_ext 2>/dev/null | tr -d '[:space:]'" -PassThru
-if ($AttrResult) {
-    $Extension = ($AttrResult | Out-String).Trim().ToLower()
+# Step 1: Query QSYS2.SYSPARTITIONSTAT directly for the source type — no need to
+# populate UTILLIB/SRCEXT first.
+Write-Host "LOG Step 1: Retrieving source member attribute via SYSPARTITIONSTAT..."
+$sqlCmd = "qsh -c `"db2 \`"SELECT TRIM(SOURCE_TYPE) FROM QSYS2.SYSPARTITIONSTAT WHERE TABLE_SCHEMA='$Library' AND TABLE_NAME='$File' AND TABLE_PARTITION='$Member'\`"`""
+$AttrResult = Invoke-Remote -Command $sqlCmd -PassThru
+# db2 output format: blank, header, dashes, data, blank, "N RECORD(S) SELECTED."
+# Take the first non-empty line AFTER the dashes separator.
+$lines = @($AttrResult | ForEach-Object { $_.ToString().Trim() })
+$dashIdx = -1
+for ($i = 0; $i -lt $lines.Count; $i++) {
+    if ($lines[$i] -match '^-+$') { $dashIdx = $i; break }
+}
+$Extension = ''
+if ($dashIdx -ge 0) {
+    $Extension = ($lines | Select-Object -Skip ($dashIdx + 1) | Where-Object { $_ -ne '' } | Select-Object -First 1)
+}
+$Extension = if ($Extension) { $Extension.ToLower() } else { '' }
+if ($Extension -and $Extension -ne '-') {
     Write-Host "LOG Source type: $Extension"
 } else {
     $Extension = "txt"

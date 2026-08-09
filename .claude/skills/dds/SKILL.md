@@ -671,7 +671,7 @@ For page-break handling, use `OVRFLW` on the `CRTPRTF` command (not in DDS) and 
 | Display file | `CRTDSPF FILE(lib/name) SRCFILE(lib/ILESRC) SRCMBR(name)` |
 | Printer file | `CRTPRTF FILE(lib/name) SRCFILE(lib/ILESRC) SRCMBR(name)` |
 
-Libraries: `LONGDM` (dev), `QALIB` (QA), `PRODLIB` (production).
+Libraries: `DEVLIB` (dev), `QALIB` (QA), `PRODLIB` (production).
 
 ---
 

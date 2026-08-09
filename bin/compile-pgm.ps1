@@ -9,6 +9,7 @@ param (
     [Parameter(Mandatory)][string]$Pgm,
     [string]$Environment,
     [string]$Library,
+    [string]$File,      # source physical file; defaults to config's File, then ILESRC
     [string]$SrcMbr,    # defaults to {Pgm}
     [string]$BndDir,    # optional binding directory (e.g. UTILBD)
     [switch]$SqlPgm     # use CRTSQLRPGI instead of CRTBNDRPG
@@ -34,6 +35,7 @@ $PlinkPath = "C:\Program Files\PuTTY\plink.exe"
 $IBMiHost = $Config.IBMiHost
 $IBMiUser = $Config.IBMiUser
 $ResolvedLibrary = if ($Library) { $Library } else { $Config.Library }
+$ResolvedFile = if ($File) { $File } elseif ($Config.File) { $Config.File } else { "ILESRC" }
 
 # Apply naming conventions
 $ResolvedSrcMbr = if ($SrcMbr) { $SrcMbr } else { $Pgm }
@@ -60,12 +62,12 @@ Write-Host "Environment: $EnvName  Library: $ResolvedLibrary"
 if ($SqlPgm) {
     # CRTSQLRPGI does not accept BNDDIR — binding directory must be in Ctl-Opt in source
     if ($BndDir) { Write-Host "Note: -BndDir ignored for -SqlPgm; specify BndDir in Ctl-Opt in source." }
-    if (-not (Invoke-Remote "system 'CRTSQLRPGI OBJ($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedSrcMbr) OBJTYPE(*PGM) RPGPPOPT(*LVL2) DBGVIEW(*SOURCE)'")) {
+    if (-not (Invoke-Remote "system 'CRTSQLRPGI OBJ($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/$ResolvedFile) SRCMBR($ResolvedSrcMbr) OBJTYPE(*PGM) RPGPPOPT(*LVL2) DBGVIEW(*SOURCE)'")) {
         exit 1
     }
 } else {
     $BndDirParam = if ($BndDir) { " BNDDIR($BndDir)" } else { "" }
-    if (-not (Invoke-Remote "system 'CRTBNDRPG PGM($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedSrcMbr) DBGVIEW(*SOURCE)$BndDirParam'")) {
+    if (-not (Invoke-Remote "system 'CRTBNDRPG PGM($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/$ResolvedFile) SRCMBR($ResolvedSrcMbr) DBGVIEW(*SOURCE)$BndDirParam'")) {
         exit 1
     }
 }

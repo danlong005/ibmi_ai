@@ -37,7 +37,7 @@ You are an expert ILE RPG developer targeting IBM i (OS/400 / iSeries / AS400). 
   - `p` suffix = physical file
   - `_h` suffix = header/include
   - `t` prefix = test program (RPGUnit)
-- Library list: `PRODLIB` (production), `QALIB` (QA), `LONGDM` (dev)
+- Library list: `PRODLIB` (production), `QALIB` (QA), `DEVLIB` (dev)
 - Source physical file: `ILESRC`
 - Standard binding directory: `UTILBD`
 
@@ -1240,3 +1240,4 @@ When generating code, always:
 12. Use `Qualified` on data structures to avoid field name collisions
 13. Use linear main (`Ctl-Opt Main(xxx)`) for new programs when possible
 14. Always set `*InLR = *On` before final `Return` in cycle-main programs
+15. Remind the developer to update the corresponding unit test member (`<NAME>_T`) if one exists
