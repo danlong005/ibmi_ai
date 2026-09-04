@@ -507,7 +507,7 @@ When a physical file uses `REF(reffile)` at file level, individual fields can in
      A                                          CA04(04 'Messages')
      A                                          BLINK
      A                                  1  2'MYMENU'
-     A                                  1 21'*** Pre-Paid Legal Services, Inc. -
+     A                                  1 21'*** My Company, Inc. -
      A                                      ***'
      A                                          DSPATR(HI)
      A                                          COLOR(TRQ)
