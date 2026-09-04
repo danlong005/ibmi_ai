@@ -8,7 +8,6 @@ param (
     [Parameter(Mandatory)][string]$TstPgm,
     [string]$Environment,
     [string]$Library,
-    [string]$File,        # source physical file; defaults to config's File, then ILESRC
     [string]$SrcMbr,      # defaults to {TstPgm}
     [string]$BndSrvPgm    # defaults to {TstPgm} with _T stripped
 )
@@ -33,14 +32,13 @@ $PlinkPath = "C:\Program Files\PuTTY\plink.exe"
 $IBMiHost = $Config.IBMiHost
 $IBMiUser = $Config.IBMiUser
 $ResolvedLibrary = if ($Library) { $Library } else { $Config.Library }
-$ResolvedFile = if ($File) { $File } elseif ($Config.File) { $Config.File } else { "ILESRC" }
 
 # Apply naming conventions
-$ResolvedSrcMbr   = if ($SrcMbr)    { $SrcMbr }    else { $TstPgm }
+$ResolvedSrcMbr    = if ($SrcMbr)    { $SrcMbr }    else { $TstPgm }
 $ResolvedBndSrvPgm = if ($BndSrvPgm) { $BndSrvPgm } else { $TstPgm -replace '_T$', '' }
 
-# Set $ResolvedLibrary as *CURLIB so its includes take precedence over PRODLIB in *USRLIBL
-$LibList = @('YAJL', 'XMLILIB', 'LIBHTTP', 'PRODLIB', 'RPGUNIT', 'QDEVTOOLS')
+# Set $ResolvedLibrary as *CURLIB so its includes take precedence over OBJLIB in *USRLIBL
+$LibList = @('YAJL', 'XMLILIB', 'LIBHTTP', 'OBJLIB', 'RPGUNIT', 'QDEVTOOLS')
 $LibListCmds = "liblist -c $ResolvedLibrary 2>/dev/null; " + (($LibList | ForEach-Object { "liblist -a $_ 2>/dev/null" }) -join '; ')
 
 function Invoke-Remote {
@@ -63,7 +61,7 @@ Write-Host "Environment: $EnvName  Library: $ResolvedLibrary"
 # than RUCRTTST, which uses OPTION(*SYSVAL) and does not play well with **free
 # source when RPGPPOPT(*LVL2) expands the iRPGUnit TESTCASE include.
 Write-Host "`n--- Step 1: Creating $TstPgm module ---"
-$step1Cmd = "system 'CRTSQLRPGI OBJ($ResolvedLibrary/$TstPgm) SRCFILE($ResolvedLibrary/$ResolvedFile) SRCMBR($ResolvedSrcMbr) OBJTYPE(*MODULE) COMMIT(*NONE) DBGVIEW(*SOURCE)'"
+$step1Cmd = "system 'CRTSQLRPGI OBJ($ResolvedLibrary/$TstPgm) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedSrcMbr) OBJTYPE(*MODULE) COMMIT(*NONE) DBGVIEW(*SOURCE)'"
 if (-not (Invoke-Remote $step1Cmd)) { exit 1 }
 
 # Step 2: Bind into a service program for RPGUnit

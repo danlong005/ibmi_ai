@@ -9,7 +9,6 @@ param (
     [Parameter(Mandatory)][string]$Pgm,
     [string]$Environment,
     [string]$Library,
-    [string]$File,      # source physical file; defaults to config's File, then ILESRC
     [string]$SrcMbr,    # defaults to {Pgm}
     [switch]$IleCl      # use CRTBNDCL instead of CRTCLPGM
 )
@@ -34,13 +33,12 @@ $PlinkPath = "C:\Program Files\PuTTY\plink.exe"
 $IBMiHost = $Config.IBMiHost
 $IBMiUser = $Config.IBMiUser
 $ResolvedLibrary = if ($Library) { $Library } else { $Config.Library }
-$ResolvedFile = if ($File) { $File } elseif ($Config.File) { $Config.File } else { "ILESRC" }
 
 # Apply naming conventions
 $ResolvedSrcMbr = if ($SrcMbr) { $SrcMbr } else { $Pgm }
 
-# Set $ResolvedLibrary as *CURLIB so its includes take precedence over PRODLIB in *USRLIBL
-$LibList = @('YAJL', 'XMLILIB', 'LIBHTTP', 'PRODLIB', 'RPGUNIT', 'QDEVTOOLS')
+# Set $ResolvedLibrary as *CURLIB so its includes take precedence over OBJLIB in *USRLIBL
+$LibList = @('APPLIB', 'YAJL', 'XMLILIB', 'LIBHTTP', 'OBJLIB', 'RPGUNIT', 'QDEVTOOLS')
 $LibListCmds = "liblist -c $ResolvedLibrary 2>/dev/null; " + (($LibList | ForEach-Object { "liblist -a $_ 2>/dev/null" }) -join '; ')
 
 function Invoke-Remote {
@@ -59,11 +57,11 @@ Write-Host "=== Compiling $Pgm CL Program ==="
 Write-Host "Environment: $EnvName  Library: $ResolvedLibrary"
 
 if ($IleCl) {
-    if (-not (Invoke-Remote "system 'CRTBNDCL PGM($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/$ResolvedFile) SRCMBR($ResolvedSrcMbr) DBGVIEW(*SOURCE)'")) {
+    if (-not (Invoke-Remote "system 'CRTBNDCL PGM($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedSrcMbr) DBGVIEW(*SOURCE)'")) {
         exit 1
     }
 } else {
-    if (-not (Invoke-Remote "system 'CRTCLPGM PGM($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/$ResolvedFile) SRCMBR($ResolvedSrcMbr)'")) {
+    if (-not (Invoke-Remote "system 'CRTCLPGM PGM($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedSrcMbr)'")) {
         exit 1
     }
 }

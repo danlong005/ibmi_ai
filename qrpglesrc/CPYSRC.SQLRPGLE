@@ -13,10 +13,10 @@
           AND SYSTEM_TABLE_MEMBER = :member;
 
         exec sql
-        DELETE FROM LONGDM/SRCEXT;
+        DELETE FROM SRCEXT;
 
         exec sql
-        INSERT INTO LONGDM/SRCEXT VALUES(:source_type);
+        INSERT INTO SRCEXT VALUES(:source_type);
 
        *inlr = *on;
        return;

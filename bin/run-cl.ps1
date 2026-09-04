@@ -28,7 +28,7 @@ $ResolvedLibrary = if ($Library) { $Library } else { $Config.Library }
 Write-Host "=== Calling CL: $ResolvedLibrary/$Pgm ==="
 Write-Host "Environment: $EnvName"
 
-$LibList = @('YAJL', 'XMLILIB', 'LIBHTTP', 'PRODLIB', 'RPGUNIT', 'QDEVTOOLS')
+$LibList = @('YAJL', 'XMLILIB', 'LIBHTTP', 'OBJLIB', 'RPGUNIT', 'QDEVTOOLS')
 $LibListCmds = "liblist -c $ResolvedLibrary 2>/dev/null; " + (($LibList | ForEach-Object { "liblist -a $_ 2>/dev/null" }) -join '; ')
 
 $FullCommand = "qsh -c `"$LibListCmds; system 'CALL PGM($ResolvedLibrary/$Pgm)'`""

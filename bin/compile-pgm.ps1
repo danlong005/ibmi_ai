@@ -9,7 +9,6 @@ param (
     [Parameter(Mandatory)][string]$Pgm,
     [string]$Environment,
     [string]$Library,
-    [string]$File,      # source physical file; defaults to config's File, then ILESRC
     [string]$SrcMbr,    # defaults to {Pgm}
     [string]$BndDir,    # optional binding directory (e.g. UTILBD)
     [switch]$SqlPgm     # use CRTSQLRPGI instead of CRTBNDRPG
@@ -35,14 +34,18 @@ $PlinkPath = "C:\Program Files\PuTTY\plink.exe"
 $IBMiHost = $Config.IBMiHost
 $IBMiUser = $Config.IBMiUser
 $ResolvedLibrary = if ($Library) { $Library } else { $Config.Library }
-$ResolvedFile = if ($File) { $File } elseif ($Config.File) { $Config.File } else { "ILESRC" }
 
 # Apply naming conventions
 $ResolvedSrcMbr = if ($SrcMbr) { $SrcMbr } else { $Pgm }
 
-# Set $ResolvedLibrary as *CURLIB so its includes take precedence over PRODLIB in *USRLIBL
-$LibList = @('YAJL', 'XMLILIB', 'LIBHTTP', 'PRODLIB', 'RPGUNIT', 'QDEVTOOLS')
-$LibListCmds = "liblist -c $ResolvedLibrary 2>/dev/null; " + (($LibList | ForEach-Object { "liblist -a $_ 2>/dev/null" }) -join '; ')
+# On UAT the user profile's lib list is already correct — only ensure OBJLIB is present (added last).
+# On dev we build the full list so OBJLIB precedes the developer library for /Include resolution.
+if ($EnvName -eq 'uat') {
+    $LibListCmds = "liblist -a OBJLIB 2>/dev/null"
+} else {
+    $LibList = @('APPLIB', 'YAJL', 'XMLILIB', 'LIBHTTP', 'OBJLIB', 'DATALIB', 'RPGUNIT', 'QDEVTOOLS')
+    $LibListCmds = (($LibList | ForEach-Object { "liblist -a $_ 2>/dev/null" }) -join '; ') + "; liblist -a $ResolvedLibrary 2>/dev/null"
+}
 
 function Invoke-Remote {
     param([string]$Command)
@@ -62,12 +65,12 @@ Write-Host "Environment: $EnvName  Library: $ResolvedLibrary"
 if ($SqlPgm) {
     # CRTSQLRPGI does not accept BNDDIR — binding directory must be in Ctl-Opt in source
     if ($BndDir) { Write-Host "Note: -BndDir ignored for -SqlPgm; specify BndDir in Ctl-Opt in source." }
-    if (-not (Invoke-Remote "system 'CRTSQLRPGI OBJ($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/$ResolvedFile) SRCMBR($ResolvedSrcMbr) OBJTYPE(*PGM) RPGPPOPT(*LVL2) DBGVIEW(*SOURCE)'")) {
+    if (-not (Invoke-Remote "system 'CRTSQLRPGI OBJ($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedSrcMbr) OBJTYPE(*PGM) RPGPPOPT(*LVL2) DBGVIEW(*SOURCE)'")) {
         exit 1
     }
 } else {
     $BndDirParam = if ($BndDir) { " BNDDIR($BndDir)" } else { "" }
-    if (-not (Invoke-Remote "system 'CRTBNDRPG PGM($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/$ResolvedFile) SRCMBR($ResolvedSrcMbr) DBGVIEW(*SOURCE)$BndDirParam'")) {
+    if (-not (Invoke-Remote "system 'CRTBNDRPG PGM($ResolvedLibrary/$Pgm) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedSrcMbr) DBGVIEW(*SOURCE)$BndDirParam'")) {
         exit 1
     }
 }

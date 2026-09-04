@@ -84,7 +84,7 @@ Every DDS source line is exactly 80 characters wide. **Column positions are crit
 
 ```dds
      A*                                         Description of file purpose
-     A                                          REF(PPPFMREF)
+     A                                          REF(FLDREF)
      A          R RMYRECORD                     TEXT('MY TABLE DESCRIPTION')
      A            MYKEY         10              TEXT('PRIMARY KEY')
      A                                          COLHDG('KEY')
@@ -190,7 +190,7 @@ Every DDS source line is exactly 80 characters wide. **Column positions are crit
 ### Select/omit with VALUES (multi-value)
 
 ```dds
-     A          R USRREC                        PFILE(PREPAID/AUTUSRP)
+     A          R USRREC                        PFILE(DATALIB/USERPF)
      A          K AUTMOD
      A          K AUTREC
      A          S AUTREC                        VALUES('CMPMSG  ' 'CDLPMSG ' +
@@ -209,7 +209,7 @@ Every DDS source line is exactly 80 characters wide. **Column positions are crit
      A                                          INDARA
      A                                          CHECK(RL)
      A                                          PRINT
-     A                                          REF(PPPFMREF)
+     A                                          REF(FLDREF)
 ```
 
 | Keyword | Meaning |
@@ -468,7 +468,7 @@ Sets indicator 79 when any input field in the record format is modified.
 When a physical file uses `REF(reffile)` at file level, individual fields can inherit definitions:
 
 ```dds
-     A                                          REF(PPPFMREF)
+     A                                          REF(FLDREF)
      A          R RMYRECORD
      A            MYFRAN    R                   REFFLD(PPFRAN)
      A            MYPOL     R                   REFFLD(PPPOL)
@@ -638,7 +638,7 @@ For page-break handling, use `OVRFLW` on the `CRTPRTF` command (not in DDS) and 
 ```dds
      A*  Billing cycle address file
      A                                          UNIQUE
-     A                                          REF(PPPFMREF)
+     A                                          REF(FLDREF)
      A          R RBCYADDR                      TEXT('BILLING CYCLE ADDR')
      A            BCADATE         L             TEXT('BILLING CYCLE DATE')
      A                                          COLHDG('BILLING' 'CYCLE DATE')
@@ -689,7 +689,7 @@ Libraries: `DEVLIB` (dev), `QALIB` (QA), `PRODLIB` (production).
 
 ## Project-specific patterns (this codebase)
 
-- Reference file: `PPPFMREF` (common field reference) — use `REF(PPPFMREF)` or `REF(PREPAID/PPPFMREF)`
+- Reference file: `FLDREF` (common field reference) — use `REF(FLDREF)` or `REF(DATALIB/FLDREF)`
 - Application-specific reference: `AEPFREF` (enrollment application fields)
 - PII fields — SSN stored encrypted in `AENSSN`; bank data in `AEBACN`/`AEBANA` — never store raw
 - Standard screen size: `DSPSIZ(24 80 *DS3)` with `MSGLOC(24)`

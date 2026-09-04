@@ -7,7 +7,6 @@ param (
     [Parameter(Mandatory)][string]$DspF,
     [string]$Environment,
     [string]$Library,
-    [string]$File,      # source physical file; defaults to config's File, then ILESRC
     [string]$SrcMbr     # defaults to {DspF}
 )
 
@@ -31,13 +30,12 @@ $PlinkPath = "C:\Program Files\PuTTY\plink.exe"
 $IBMiHost = $Config.IBMiHost
 $IBMiUser = $Config.IBMiUser
 $ResolvedLibrary = if ($Library) { $Library } else { $Config.Library }
-$ResolvedFile = if ($File) { $File } elseif ($Config.File) { $Config.File } else { "ILESRC" }
 
 # Apply naming conventions
 $ResolvedSrcMbr = if ($SrcMbr) { $SrcMbr } else { $DspF }
 
-# Set $ResolvedLibrary as *CURLIB so its includes take precedence over PRODLIB in *USRLIBL
-$LibList = @('YAJL', 'XMLILIB', 'LIBHTTP', 'PRODLIB', 'RPGUNIT', 'QDEVTOOLS')
+# Set $ResolvedLibrary as *CURLIB so its includes take precedence over OBJLIB in *USRLIBL
+$LibList = @('YAJL', 'XMLILIB', 'LIBHTTP', 'OBJLIB', 'RPGUNIT', 'QDEVTOOLS')
 $LibListCmds = "liblist -c $ResolvedLibrary 2>/dev/null; " + (($LibList | ForEach-Object { "liblist -a $_ 2>/dev/null" }) -join '; ')
 
 function Invoke-Remote {
@@ -55,7 +53,7 @@ function Invoke-Remote {
 Write-Host "=== Compiling $DspF Display File ==="
 Write-Host "Environment: $EnvName  Library: $ResolvedLibrary"
 
-if (-not (Invoke-Remote "system 'CRTDSPF FILE($ResolvedLibrary/$DspF) SRCFILE($ResolvedLibrary/$ResolvedFile) SRCMBR($ResolvedSrcMbr)'")) {
+if (-not (Invoke-Remote "system 'CRTDSPF FILE($ResolvedLibrary/$DspF) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedSrcMbr)'")) {
     exit 1
 }
 

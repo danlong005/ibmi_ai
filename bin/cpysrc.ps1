@@ -65,7 +65,7 @@ Write-Host "LOG Library=$Library, File=$File, Member=$Member"
 # Step 1: Query QSYS2.SYSPARTITIONSTAT directly for the source type — no need to
 # populate UTILLIB/SRCEXT first.
 Write-Host "LOG Step 1: Retrieving source member attribute via SYSPARTITIONSTAT..."
-$sqlCmd = "qsh -c `"db2 \`"SELECT TRIM(SOURCE_TYPE) FROM QSYS2.SYSPARTITIONSTAT WHERE TABLE_SCHEMA='$Library' AND TABLE_NAME='$File' AND TABLE_PARTITION='$Member'\`"`""
+$sqlCmd = "qsh -c `"db2 \`"SELECT TRIM(SOURCE_TYPE) FROM QSYS2.SYSPARTITIONSTAT WHERE TABLE_SCHEMA='$Library' AND TABLE_NAME='$File' AND TABLE_PARTITION='$($Member.ToUpper())'\`"`""
 $AttrResult = Invoke-Remote -Command $sqlCmd -PassThru
 # db2 output format: blank, header, dashes, data, blank, "N RECORD(S) SELECTED."
 # Take the first non-empty line AFTER the dashes separator.

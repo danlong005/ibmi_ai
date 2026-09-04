@@ -8,11 +8,10 @@ param (
     [Parameter(Mandatory)][string]$SrvPgm,
     [string]$Environment,
     [string]$Library,
-    [string]$File,        # source physical file; defaults to config's File, then ILESRC
     [string]$ModuleSrc,   # defaults to {SrvPgm}
     [string]$BndSrc,      # defaults to {SrvPgm}_B
     [string]$BndDir,      # optional binding directory (e.g. YAJL/YAJL)
-    [string]$BndSrvPgm,   # optional bound service program (e.g. DEVLIB/CDP)
+    [string]$BndSrvPgm,   # optional bound service program (e.g. MYLIB/MYSRVPGM)
     [switch]$SqlModule    # use CRTSQLRPGI instead of CRTRPGMOD
 )
 
@@ -36,14 +35,13 @@ $PlinkPath = "C:\Program Files\PuTTY\plink.exe"
 $IBMiHost = $Config.IBMiHost
 $IBMiUser = $Config.IBMiUser
 $ResolvedLibrary = if ($Library) { $Library } else { $Config.Library }
-$ResolvedFile = if ($File) { $File } elseif ($Config.File) { $Config.File } else { "ILESRC" }
 
 # Apply naming conventions
 $ResolvedModuleSrc = if ($ModuleSrc) { $ModuleSrc } else { $SrvPgm }
 $ResolvedBndSrc    = if ($BndSrc)    { $BndSrc }    else { "${SrvPgm}_B" }
 
-# Set $ResolvedLibrary as *CURLIB so its includes take precedence over PRODLIB in *USRLIBL
-$LibList = @('YAJL', 'XMLILIB', 'LIBHTTP', 'PRODLIB', 'RPGUNIT', 'QDEVTOOLS')
+# Set $ResolvedLibrary as *CURLIB so its includes take precedence over OBJLIB in *USRLIBL
+$LibList = @('APPLIB', 'YAJL', 'XMLILIB', 'LIBHTTP', 'OBJLIB', 'RPGUNIT', 'QDEVTOOLS')
 $LibListCmds = "liblist -c $ResolvedLibrary 2>/dev/null; " + (($LibList | ForEach-Object { "liblist -a $_ 2>/dev/null" }) -join '; ')
 
 function Invoke-Remote {
@@ -64,9 +62,9 @@ Write-Host "Environment: $EnvName  Library: $ResolvedLibrary"
 # Step 1: Compile module
 Write-Host "`n--- Step 1: Creating $SrvPgm module ---"
 if ($SqlModule) {
-    $step1 = Invoke-Remote "system 'CRTSQLRPGI OBJ($ResolvedLibrary/$SrvPgm) SRCFILE($ResolvedLibrary/$ResolvedFile) SRCMBR($ResolvedModuleSrc) OBJTYPE(*MODULE) RPGPPOPT(*LVL2) DBGVIEW(*SOURCE)'"
+    $step1 = Invoke-Remote "system 'CRTSQLRPGI OBJ($ResolvedLibrary/$SrvPgm) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedModuleSrc) OBJTYPE(*MODULE) RPGPPOPT(*LVL2) DBGVIEW(*SOURCE)'"
 } else {
-    $step1 = Invoke-Remote "system 'CRTRPGMOD MODULE($ResolvedLibrary/$SrvPgm) SRCFILE($ResolvedLibrary/$ResolvedFile) SRCMBR($ResolvedModuleSrc) DBGVIEW(*SOURCE)'"
+    $step1 = Invoke-Remote "system 'CRTRPGMOD MODULE($ResolvedLibrary/$SrvPgm) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedModuleSrc) DBGVIEW(*SOURCE)'"
 }
 if (-not $step1) { exit 1 }
 
@@ -74,7 +72,7 @@ if (-not $step1) { exit 1 }
 Write-Host "`n--- Step 2: Creating $SrvPgm service program ---"
 $BndDirParam    = if ($BndDir)    { " BNDDIR($BndDir)" }       else { "" }
 $BndSrvPgmParam = if ($BndSrvPgm) { " BNDSRVPGM($BndSrvPgm)" } else { "" }
-if (-not (Invoke-Remote "system 'CRTSRVPGM SRVPGM($ResolvedLibrary/$SrvPgm) MODULE($ResolvedLibrary/$SrvPgm) EXPORT(*SRCFILE) SRCFILE($ResolvedLibrary/$ResolvedFile) SRCMBR($ResolvedBndSrc) ACTGRP(*CALLER)$BndDirParam$BndSrvPgmParam'")) {
+if (-not (Invoke-Remote "system 'CRTSRVPGM SRVPGM($ResolvedLibrary/$SrvPgm) MODULE($ResolvedLibrary/$SrvPgm) EXPORT(*SRCFILE) SRCFILE($ResolvedLibrary/ILESRC) SRCMBR($ResolvedBndSrc) ACTGRP(*CALLER)$BndDirParam$BndSrvPgmParam'")) {
     exit 1
 }
 
