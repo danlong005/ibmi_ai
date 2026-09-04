@@ -290,26 +290,6 @@ if ($envCount -eq 1 -or -not $RootConfig.DefaultEnvironment) {
     }
 }
 
-# Gating profile for /dev skill
-$validProfiles = @('full', 'lite', 'autonomous', 'AllGasNoBrakes')
-$existingProfile = if ($RootConfig.PSObject.Properties['GatingProfile']) { $RootConfig.GatingProfile } else { 'full' }
-Write-Host ""
-Write-Host "Dev gating profile (full | lite | autonomous | AllGasNoBrakes):"
-Write-Host "  full            — Plan+Design approval, Results approval, Hours+Status"
-Write-Host "  lite            — Plan+Design approval, Hours+Status"
-Write-Host "  autonomous      — Hours+Status only"
-Write-Host "  AllGasNoBrakes  — No gates (hours/status via --hours/--status args or logged manually)"
-$profileInput = Prompt-Value -Default $existingProfile -Prompt "Gating profile"
-if ($profileInput -notin $validProfiles) {
-    Write-Host "WARNING: '$profileInput' is not a recognized profile. Defaulting to 'full'."
-    $profileInput = 'full'
-}
-if ($RootConfig.PSObject.Properties['GatingProfile']) {
-    $RootConfig.GatingProfile = $profileInput
-} else {
-    $RootConfig | Add-Member -NotePropertyName 'GatingProfile' -NotePropertyValue $profileInput
-}
-
 $RootConfig | ConvertTo-Json -Depth 4 | Out-File -FilePath $ConfigPath -Encoding utf8
 
 Write-Host ""
