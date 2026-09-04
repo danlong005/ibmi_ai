@@ -38,14 +38,9 @@ $ResolvedLibrary = if ($Library) { $Library } else { $Config.Library }
 # Apply naming conventions
 $ResolvedSrcMbr = if ($SrcMbr) { $SrcMbr } else { $Pgm }
 
-# On UAT the user profile's lib list is already correct — only ensure OBJLIB is present (added last).
-# On dev we build the full list so OBJLIB precedes the developer library for /Include resolution.
-if ($EnvName -eq 'uat') {
-    $LibListCmds = "liblist -a OBJLIB 2>/dev/null"
-} else {
-    $LibList = @('APPLIB', 'YAJL', 'XMLILIB', 'LIBHTTP', 'OBJLIB', 'DATALIB', 'RPGUNIT', 'QDEVTOOLS')
-    $LibListCmds = (($LibList | ForEach-Object { "liblist -a $_ 2>/dev/null" }) -join '; ') + "; liblist -a $ResolvedLibrary 2>/dev/null"
-}
+# Add any extra libraries your source needs on the *LIBL below (e.g. YAJL, RPGUNIT). $ResolvedLibrary is set as *CURLIB.
+$LibList = @()
+$LibListCmds = "liblist -c $ResolvedLibrary 2>/dev/null; " + (($LibList | ForEach-Object { "liblist -a $_ 2>/dev/null" }) -join '; ')
 
 function Invoke-Remote {
     param([string]$Command)

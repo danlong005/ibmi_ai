@@ -118,7 +118,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
-LIB_LIST=(YAJL XMLILIB LIBHTTP PRODLIB RPGUNIT QDEVTOOLS)
+# Add any extra libraries your source needs on the *LIBL below (e.g. YAJL RPGUNIT). LIBRARY is set as *CURLIB.
+LIB_LIST=()
 LIB_LIST_CMDS="liblist -c $LIBRARY 2>/dev/null"
 for lib in "${LIB_LIST[@]}"; do
     LIB_LIST_CMDS="$LIB_LIST_CMDS; liblist -a $lib 2>/dev/null"

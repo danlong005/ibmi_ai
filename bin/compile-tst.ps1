@@ -37,8 +37,8 @@ $ResolvedLibrary = if ($Library) { $Library } else { $Config.Library }
 $ResolvedSrcMbr    = if ($SrcMbr)    { $SrcMbr }    else { $TstPgm }
 $ResolvedBndSrvPgm = if ($BndSrvPgm) { $BndSrvPgm } else { $TstPgm -replace '_T$', '' }
 
-# Set $ResolvedLibrary as *CURLIB so its includes take precedence over OBJLIB in *USRLIBL
-$LibList = @('YAJL', 'XMLILIB', 'LIBHTTP', 'OBJLIB', 'RPGUNIT', 'QDEVTOOLS')
+# Add any extra libraries your source needs on the *LIBL below (e.g. YAJL, RPGUNIT). $ResolvedLibrary is set as *CURLIB.
+$LibList = @()
 $LibListCmds = "liblist -c $ResolvedLibrary 2>/dev/null; " + (($LibList | ForEach-Object { "liblist -a $_ 2>/dev/null" }) -join '; ')
 
 function Invoke-Remote {

@@ -32,7 +32,8 @@ Write-Host "=== Running Test Suite: $TestProgram ==="
 Write-Host "Environment: $EnvName  Library: $ResolvedLibrary"
 if ($TestProc) { Write-Host "Test procedure: $TestProc" }
 
-$LibList = @('YAJL', 'XMLILIB', 'LIBHTTP', 'OBJLIB', 'RPGUNIT', 'QDEVTOOLS')
+# Add any extra libraries your source needs on the *LIBL below (e.g. YAJL, RPGUNIT). $ResolvedLibrary is set as *CURLIB.
+$LibList = @()
 $LibListCmds = "liblist -c $ResolvedLibrary 2>/dev/null; " + (($LibList | ForEach-Object { "liblist -a $_ 2>/dev/null" }) -join '; ')
 
 $TstPrcClause = if ($TestProc) { " TSTPRC($TestProc)" } else { "" }
