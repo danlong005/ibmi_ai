@@ -70,8 +70,11 @@ bash bin/run-tests.sh MBRNAME_T -e dev
 - **`source/`** — Working directory for downloaded/edited source files (gitignored)
 - **`production_source/ilesrc/`** — Read-only production source reference (~24,000 files, gitignored)
 - **`bin/`** — PowerShell (`.ps1`) and Bash (`.sh`) tooling: `setup-ibmi`, `cpysrc`, `putsrc`, `compile-pgm`, `compile-cl`, `compile-dspf`, `compile-srvpgm`, `compile-tst`, `run-tests`, `run-cl`, `get-zip`
-- **`documentation/`** — Project planning docs including repository split plan
-- **`test_docs/`** — Test documentation
+- **`documentation/`** — Project planning docs (contents gitignored; local only)
+- **`test_docs/`** — Test documentation (contents gitignored; local only)
+- **`.claude/skills/`** — Claude Code skills (`rpg`, `dds`, `cl`, `cpysrc`, `putsrc`)
+- **`.claude/commands/`** — Claude Code slash commands (`cmppgm`, `cmpcl`, `cmpdspf`, `cmpsrv`, `cmptst`, `runtst`, `mdtopdf`)
+- **`AGENTS.md`** — Skill index for non-Claude coding agents; keep in sync with `.claude/skills/`
 
 ### Environment Mapping
 
@@ -109,17 +112,23 @@ Config stored in `bin/.ibmi-config.json` (encrypted, gitignored) — host, user,
 4. Compile on IBM i: `bash bin/compile-pgm.sh MBRNAME` (or the matching `compile-*` script for the object type)
 5. Test on IBM i: `bash bin/run-tests.sh MBRNAME_T` (RPGUnit)
 
-## Claude Code Skills
+## Claude Code Skills and Commands
 
-This repo has custom skills for IBM i development:
+Code-generation skills (prompt-only, no scripts):
 
 - **`/rpg`** — Generate ILE RPG programs, service programs, modules, headers
 - **`/dds`** — Generate/validate DDS source (PF, LF, DSPF, PRTF)
 - **`/cl`** — Generate CL programs (OPM .clp and ILE .clle)
+
+Script wrappers (each detects the platform and runs the matching `.sh` or `.ps1` script):
+
 - **`/cpysrc`** — Download source member from IBM i
 - **`/putsrc`** — Upload source member to IBM i
+- **`/cmppgm`**, **`/cmpcl`**, **`/cmpdspf`**, **`/cmpsrv`**, **`/cmptst`** — Compile a program, CL program, display file, service program, or RPGUnit test program
+- **`/runtst`** — Run an RPGUnit test suite
+- **`/mdtopdf`** — Convert a markdown file to PDF (`bin/md_to_pdf.py`, needs `fpdf2`)
 
-Compiling and testing are done via the `bin/compile-*` and `bin/run-tests` scripts directly (see Compilation above), not through a skill.
+The Bash and PowerShell scripts use different flag names (e.g. `--sql` vs `-SqlPgm`); each command documents both.
 
 ## IBM i Coding Conventions
 
@@ -139,4 +148,4 @@ Compiling and testing are done via the `bin/compile-*` and `bin/run-tests` scrip
 - `source/` and `production_source/` are gitignored — source files are not committed
 - The `bin/.ibmi-config.json` contains encrypted credentials — never commit
 - PuTTY (`plink`/`psftp`) is required for IBM i connectivity on Windows; `ssh`/`sftp`/`expect` on macOS/Linux
-- The repo is planned for future split into 16 domain-specific repositories (see `documentation/Git_Project_Split_Plan.md`)
+- The repo is planned for future split into 16 domain-specific repositories

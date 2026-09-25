@@ -104,7 +104,7 @@ if (Test-Path $ConfigPath) {
 if ($RootConfig -and -not $RootConfig.PSObject.Properties['Environments']) {
     Write-Host "Migrating existing config to multi-environment format..."
     $legacyEnv = @{}
-    foreach ($prop in @('IBMiHost','IBMiUser','IBMiPassword','SSHPort','Library','File','HomeDir','UtilityLibrary')) {
+    foreach ($prop in @('IBMiHost','IBMiUser','IBMiPassword','SSHPort','Library','File','HomeDir')) {
         if ($RootConfig.PSObject.Properties[$prop]) {
             $legacyEnv[$prop] = $RootConfig.$prop
         }
@@ -255,20 +255,15 @@ $HomeDir = Prompt-Value `
     -Default $(if ($Existing.HomeDir) { $Existing.HomeDir } else { "/home/$($IBMiUser.ToUpper())" }) `
     -Prompt "Home Directory"
 
-$UtilityLibrary = Prompt-Value `
-    -Default $(if ($Existing.UtilityLibrary) { $Existing.UtilityLibrary } else { $IBMiUser.ToUpper() }) `
-    -Prompt "Utility Library (for CPYSRC etc.)"
-
 # Build environment entry
 $EnvConfig = [PSCustomObject]@{
-    IBMiHost       = $IBMiHost
-    IBMiUser       = $IBMiUser
-    IBMiPassword   = $EncryptedPassword
-    SSHPort        = $SSHPort
-    Library        = $Library.ToUpper()
-    File           = $File.ToUpper()
-    HomeDir        = $HomeDir
-    UtilityLibrary = $UtilityLibrary.ToUpper()
+    IBMiHost     = $IBMiHost
+    IBMiUser     = $IBMiUser
+    IBMiPassword = $EncryptedPassword
+    SSHPort      = $SSHPort
+    Library      = $Library.ToUpper()
+    File         = $File.ToUpper()
+    HomeDir      = $HomeDir
 }
 
 # Add or update environment

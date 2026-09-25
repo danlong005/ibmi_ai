@@ -15,3 +15,8 @@ precedence over these skill instructions.
 
 If a request involves more than one listed area, load every applicable skill
 before beginning work.
+
+For compiling and testing on IBM i, follow the matching instructions in
+`.claude/commands/`: `cmppgm.md` (RPG/SQLRPGLE program), `cmpcl.md` (CL
+program), `cmpdspf.md` (display file), `cmpsrv.md` (service program),
+`cmptst.md` (RPGUnit test program), and `runtst.md` (run RPGUnit tests).

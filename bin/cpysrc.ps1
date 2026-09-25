@@ -62,8 +62,7 @@ function Invoke-Remote {
 Write-Host "=== Starting download of member: $Member ==="
 Write-Host "LOG Library=$Library, File=$File, Member=$Member"
 
-# Step 1: Query QSYS2.SYSPARTITIONSTAT directly for the source type — no need to
-# populate UTILLIB/SRCEXT first.
+# Step 1: Query QSYS2.SYSPARTITIONSTAT directly for the source type.
 Write-Host "LOG Step 1: Retrieving source member attribute via SYSPARTITIONSTAT..."
 $sqlCmd = "qsh -c `"db2 \`"SELECT TRIM(SOURCE_TYPE) FROM QSYS2.SYSPARTITIONSTAT WHERE TABLE_SCHEMA='$Library' AND TABLE_NAME='$File' AND TABLE_PARTITION='$($Member.ToUpper())'\`"`""
 $AttrResult = Invoke-Remote -Command $sqlCmd -PassThru

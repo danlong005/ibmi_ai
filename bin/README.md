@@ -41,7 +41,6 @@ You will be prompted for:
 | Library | Target source library | Same as user (uppercase) |
 | Source File | Source physical file name | `ILESRC` |
 | Home Directory | IFS home directory for temp files | `/home/<USER>` |
-| Utility Library | Library containing CPYSRC program | Same as user (uppercase) |
 
 The first environment you add is automatically set as the default.
 
@@ -152,8 +151,7 @@ The config file (`bin/ibmi-config.json`) looks like this:
       "IBMiPassword": "01000000d08c9ddf...(DPAPI encrypted)...",
       "Library": "MYUSER",
       "File": "ILESRC",
-      "HomeDir": "/home/MYUSER",
-      "UtilityLibrary": "MYUSER"
+      "HomeDir": "/home/MYUSER"
     },
     "qa": {
       "IBMiHost": "myhost.example.com",
@@ -161,8 +159,7 @@ The config file (`bin/ibmi-config.json`) looks like this:
       "IBMiPassword": "01000000d08c9ddf...(DPAPI encrypted)...",
       "Library": "QALIB",
       "File": "ILESRC",
-      "HomeDir": "/home/MYUSER",
-      "UtilityLibrary": "MYUSER"
+      "HomeDir": "/home/MYUSER"
     }
   }
 }

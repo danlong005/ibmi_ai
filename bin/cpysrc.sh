@@ -168,8 +168,7 @@ trap cleanup EXIT
 echo "=== Starting download of member: $MEMBER ==="
 echo "LOG Library=$LIBRARY, File=$FILE, Member=$MEMBER"
 
-# Step 1: Query QSYS2.SYSPARTITIONSTAT directly for the source type — no need
-# for a UTILLIB/CPYSRC program or SRCEXT file on the IBM i side.
+# Step 1: Query QSYS2.SYSPARTITIONSTAT directly for the source type.
 echo "LOG Step 1: Retrieving source member attribute via SYSPARTITIONSTAT..."
 SQL="SELECT TRIM(SOURCE_TYPE) FROM QSYS2.SYSPARTITIONSTAT WHERE TABLE_SCHEMA='${LIBRARY}' AND TABLE_NAME='${FILE}' AND TABLE_PARTITION='${MEMBER}'"
 QSH_CMD="qsh -c \"db2 \\\"${SQL}\\\"\""

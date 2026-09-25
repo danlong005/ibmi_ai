@@ -132,8 +132,7 @@ else
                 SSHPort: .SSHPort,
                 Library: .Library,
                 File: .File,
-                HomeDir: .HomeDir,
-                UtilityLibrary: .UtilityLibrary
+                HomeDir: .HomeDir
             }
         }
     }')
@@ -201,7 +200,7 @@ fi
 
 # Load existing environment values as defaults
 EXISTING_HOST="" EXISTING_USER="" EXISTING_PASS="" EXISTING_PORT=""
-EXISTING_LIB="" EXISTING_FILE="" EXISTING_HOME="" EXISTING_UTILLIB=""
+EXISTING_LIB="" EXISTING_FILE="" EXISTING_HOME=""
 
 if echo "$ROOT_CONFIG" | jq -e ".Environments[\"$ENVIRONMENT\"]" &>/dev/null; then
     echo "Editing existing environment '$ENVIRONMENT' — press Enter to keep current values."
@@ -212,7 +211,6 @@ if echo "$ROOT_CONFIG" | jq -e ".Environments[\"$ENVIRONMENT\"]" &>/dev/null; th
     EXISTING_LIB=$(echo "$ROOT_CONFIG" | jq -r ".Environments[\"$ENVIRONMENT\"].Library // \"\"")
     EXISTING_FILE=$(echo "$ROOT_CONFIG" | jq -r ".Environments[\"$ENVIRONMENT\"].File // \"\"")
     EXISTING_HOME=$(echo "$ROOT_CONFIG" | jq -r ".Environments[\"$ENVIRONMENT\"].HomeDir // \"\"")
-    EXISTING_UTILLIB=$(echo "$ROOT_CONFIG" | jq -r ".Environments[\"$ENVIRONMENT\"].UtilityLibrary // \"\"")
 else
     echo "Creating new environment '$ENVIRONMENT'."
 fi
@@ -274,8 +272,6 @@ LIBRARY=$(echo "$LIBRARY" | tr '[:lower:]' '[:upper:]')
 SOURCE_FILE=$(prompt_value "Source File" "${EXISTING_FILE:-ILESRC}")
 SOURCE_FILE=$(echo "$SOURCE_FILE" | tr '[:lower:]' '[:upper:]')
 HOME_DIR=$(prompt_value "Home Directory" "${EXISTING_HOME:-/home/$IBMI_USER_UPPER}")
-UTILITY_LIBRARY=$(prompt_value "Utility Library (reserved for future use)" "${EXISTING_UTILLIB:-$IBMI_USER_UPPER}")
-UTILITY_LIBRARY=$(echo "$UTILITY_LIBRARY" | tr '[:lower:]' '[:upper:]')
 
 # Build and save environment entry
 ROOT_CONFIG=$(echo "$ROOT_CONFIG" | jq \
@@ -287,7 +283,6 @@ ROOT_CONFIG=$(echo "$ROOT_CONFIG" | jq \
     --arg lib "$LIBRARY" \
     --arg file "$SOURCE_FILE" \
     --arg home "$HOME_DIR" \
-    --arg utillib "$UTILITY_LIBRARY" \
     '.Environments[$env] = {
         IBMiHost: $host,
         IBMiUser: $user,
@@ -295,8 +290,7 @@ ROOT_CONFIG=$(echo "$ROOT_CONFIG" | jq \
         SSHPort: $port,
         Library: $lib,
         File: $file,
-        HomeDir: $home,
-        UtilityLibrary: $utillib
+        HomeDir: $home
     }')
 
 # Set as default if it's the only one, or ask

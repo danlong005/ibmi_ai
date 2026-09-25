@@ -1,6 +1,6 @@
 # IBM i Development Toolkit
 
-Local development tooling for IBM i (iSeries/AS400) source management. Provides PowerShell scripts to download and upload source members between your PC and IBM i, with multi-environment support and encrypted credential storage.
+Local development tooling for IBM i (iSeries/AS400) source management. Provides PowerShell (Windows) and Bash (macOS/Linux) scripts to download, upload, compile, and test source members on IBM i, with multi-environment support and encrypted credential storage.
 
 ## Prerequisites
 
@@ -24,7 +24,7 @@ Scripts are available in both **PowerShell** (Windows) and **Bash** (macOS/Linux
 
 ```bash
 git clone <repo-url>
-cd ibmi
+cd ibmi_ai
 ```
 
 ### 2. Configure your first environment
@@ -133,18 +133,18 @@ These generate source following this repo's conventions. They don't call any scr
 
 ### Script-invoking skills
 
-These wrap the `bin/` scripts. `/cpysrc` and `/putsrc` detect Windows vs. macOS/Linux and run the matching `.ps1`/`.sh` script; the compile/test skills currently shell out to the PowerShell (`.ps1`) scripts.
+These wrap the `bin/` scripts. Each one detects Windows vs. macOS/Linux and runs the matching `.ps1` or `.sh` script.
 
 | Skill | Runs |
 |-------|------|
-| `/cpysrc <MEMBER> [-e env]` | `bin/cpysrc.ps1` or `bin/cpysrc.sh` — download a source member |
-| `/putsrc <MEMBER> [-e env]` | `bin/putsrc.ps1` or `bin/putsrc.sh` — upload a source member |
-| `/cmppgm <NAME> ...` | `bin/compile-pgm.ps1` — compile a bound RPG/SQLRPGLE program |
-| `/cmpcl <NAME> ...` | `bin/compile-cl.ps1` — compile a CL program |
-| `/cmpdspf <NAME> ...` | `bin/compile-dspf.ps1` — compile a display file |
-| `/cmpsrv <NAME> ...` | `bin/compile-srvpgm.ps1` — compile a service program |
-| `/cmptst <NAME> ...` | `bin/compile-tst.ps1` — compile an RPGUnit test program |
-| `/runtst <TSTPGM> ...` | `bin/run-tests.ps1` — run an RPGUnit test suite |
+| `/cpysrc <MEMBER> [-e env]` | `bin/cpysrc.sh` / `.ps1` — download a source member |
+| `/putsrc <MEMBER> [-e env]` | `bin/putsrc.sh` / `.ps1` — upload a source member |
+| `/cmppgm <NAME> ...` | `bin/compile-pgm.sh` / `.ps1` — compile a bound RPG/SQLRPGLE program |
+| `/cmpcl <NAME> ...` | `bin/compile-cl.sh` / `.ps1` — compile a CL program |
+| `/cmpdspf <NAME> ...` | `bin/compile-dspf.sh` / `.ps1` — compile a display file |
+| `/cmpsrv <NAME> ...` | `bin/compile-srvpgm.sh` / `.ps1` — compile a service program |
+| `/cmptst <NAME> ...` | `bin/compile-tst.sh` / `.ps1` — compile an RPGUnit test program |
+| `/runtst <TSTPGM> ...` | `bin/run-tests.sh` / `.ps1` — run an RPGUnit test suite |
 | `/mdtopdf <file.md>` | `bin/md_to_pdf.py` — convert a markdown file to PDF |
 
 Each skill shows the script's full output and, on failure, summarizes the error and suggests a fix rather than just dumping the raw log.
@@ -152,7 +152,7 @@ Each skill shows the script's full output and, on failure, summarizes the error 
 ## Project Structure
 
 ```
-ibmi/
+ibmi_ai/
 ├── bin/                        # Scripts and tooling
 │   ├── setup-ibmi.ps1          # Config setup wizard (PowerShell)
 │   ├── setup-ibmi.sh           # Config setup wizard (Bash)
@@ -168,6 +168,7 @@ ibmi/
 │   ├── run-tests.ps1/.sh       # Run an RPGUnit test suite
 │   ├── run-cl.ps1/.sh          # Call a CL program by name
 │   ├── get-zip.ps1/.sh         # List/download .zip files from IBM i
+│   ├── md_to_pdf.py            # Markdown → PDF converter (needs fpdf2)
 │   ├── .ibmi-config.json       # Local config (gitignored, created by setup)
 │   └── README.md               # Detailed script documentation
 ├── source/                     # Working source files (downloaded/edited here)
@@ -175,6 +176,12 @@ ibmi/
 │   └── ilesrc/                 # ILE source members (.rpgle, .sqlrpgle, .clle, .dspf, .pf, .lf, etc.)
 ├── documentation/              # Project documentation and design docs
 ├── test_docs/                  # Test documentation
+├── .claude/
+│   ├── skills/                 # Claude Code skills (rpg, dds, cl, cpysrc, putsrc)
+│   ├── commands/               # Claude Code slash commands (cmp*, runtst, mdtopdf)
+│   └── settings.json           # Shared Claude Code permissions
+├── AGENTS.md                   # Skill index for other coding agents
+├── CLAUDE.md                   # Project guidance for Claude Code
 ├── .gitignore
 └── README.md
 ```
@@ -192,6 +199,8 @@ ibmi/
 | `.pf` | Physical file (DDS) |
 | `.lf` | Logical file (DDS) |
 | `.sql` | SQL DDL/DML |
+| `.bnd` | Binder source (used with CRTSRVPGM) |
+| `.cmd` | Command definition |
 
 ## Security
 

@@ -13,3 +13,9 @@ bin/.ibmi-config.json
 !production_source/.gitkeep
 !documentation/.gitkeep
 !test_docs/.gitkeep
+
+# Python bytecode
+__pycache__/
+
+# Per-user Claude Code settings (shared settings go in .claude/settings.json)
+.claude/settings.local.json

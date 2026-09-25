@@ -85,7 +85,6 @@ CONFIG=$(echo "$ROOT_CONFIG" | jq ".Environments[\"$ENV_NAME\"]")
 [[ -z "$LIBRARY" ]]   && LIBRARY=$(echo "$CONFIG" | jq -r '.Library')
 [[ -z "$FILE" ]]      && FILE=$(echo "$CONFIG" | jq -r '.File')
 HOME_DIR=$(echo "$CONFIG" | jq -r '.HomeDir')
-UTIL_LIB=$(echo "$CONFIG" | jq -r '.UtilityLibrary')
 
 # Resolve password: CLI > config (encrypted) > prompt
 if [[ -z "$IBMI_PASSWORD" ]]; then
