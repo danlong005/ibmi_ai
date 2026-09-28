@@ -72,7 +72,7 @@ bash bin/run-tests.sh MBRNAME_T -e dev
 - **`bin/`** — PowerShell (`.ps1`) and Bash (`.sh`) tooling: `setup-ibmi`, `cpysrc`, `putsrc`, `compile-pgm`, `compile-cl`, `compile-dspf`, `compile-srvpgm`, `compile-tst`, `run-tests`, `run-cl`, `get-zip`
 - **`documentation/`** — Project planning docs (contents gitignored; local only)
 - **`test_docs/`** — Test documentation (contents gitignored; local only)
-- **`.claude/skills/`** — Claude Code skills (`rpg`, `dds`, `cl`, `cpysrc`, `putsrc`)
+- **`.claude/skills/`** — Claude Code skills (`rpg`, `rpgapi`, `dds`, `cl`, `cpysrc`, `putsrc`)
 - **`.claude/commands/`** — Claude Code slash commands (`cmppgm`, `cmpcl`, `cmpdspf`, `cmpsrv`, `cmptst`, `runtst`, `mdtopdf`)
 - **`AGENTS.md`** — Skill index for non-Claude coding agents; keep in sync with `.claude/skills/`
 
@@ -117,6 +117,7 @@ Config stored in `bin/.ibmi-config.json` (encrypted, gitignored) — host, user,
 Code-generation skills (prompt-only, no scripts):
 
 - **`/rpg`** — Generate ILE RPG programs, service programs, modules, headers
+- **`/rpgapi`** — Create and modify RPGAPI web apps (routes, middleware, JSON APIs, `.erpg` views)
 - **`/dds`** — Generate/validate DDS source (PF, LF, DSPF, PRTF)
 - **`/cl`** — Generate CL programs (OPM .clp and ILE .clle)
 

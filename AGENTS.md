@@ -12,6 +12,7 @@ precedence over these skill instructions.
 | `dds` | IBM i DDS source: PF, LF, DSPF, or PRTF creation, review, or validation | `.claude/skills/dds/SKILL.md` |
 | `putsrc` | Uploading an IBM i source member | `.claude/skills/putsrc/SKILL.md` |
 | `rpg` | RPG, RPGLE, or SQLRPGLE code creation, modification, or review | `.claude/skills/rpg/SKILL.md` |
+| `rpgapi` | RPGAPI web apps (Express-style ILE RPG web framework): APIs, routes, middleware, `.erpg` views, building and running them | `.claude/skills/rpgapi/SKILL.md` |
 
 If a request involves more than one listed area, load every applicable skill
 before beginning work.
