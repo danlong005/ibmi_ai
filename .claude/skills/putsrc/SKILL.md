@@ -6,7 +6,7 @@ allowed-tools: Bash
 argument-hint: <MEMBER> [-e environment] [-l library] [-f srcfile]
 ---
 
-Upload a source member to IBM i. The script finds the file in the `source/` directory, uploads it via SFTP, and copies it into the source physical file on IBM i using CPYFRMSTMF.
+Upload a source member to IBM i. The script finds the file under `source/<srcfile>/` and uses that folder name as the target source file (an explicit `-f`/`-File` overrides it and limits the search to that folder; files directly in `source/` use the configured file). It uploads it via SFTP and copies it into the source physical file on IBM i using CPYFRMSTMF.
 
 ## Platform
 
@@ -20,7 +20,7 @@ Upload a source member to IBM i. The script finds the file in the `source/` dire
 | Member name (first positional) | `<MEMBER>` | `<MEMBER>` | required |
 | Environment | `-e ENV` | `-Environment ENV` | default env from config |
 | Library | `-l LIB` | `-Library LIB` | from config |
-| Source physical file | `-f FILE` | `-File FILE` | `ILESRC` |
+| Source physical file | `-f FILE` | `-File FILE` | folder the member is in (else config file) |
 
 ## Steps
 

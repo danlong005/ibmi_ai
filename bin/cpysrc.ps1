@@ -91,9 +91,9 @@ Invoke-Remote -Command "mkdir -p $($Config.HomeDir)/source"
 $RemoteStream = "$($Config.HomeDir)/source/$Member.$Extension"
 Write-Host "LOG Remote IFS path: $RemoteStream"
 
-# Step 4: Build local path
-$SourceDir = Join-Path (Resolve-Path $LocalDir) "source"
-if (-not (Test-Path $SourceDir)) { New-Item -ItemType Directory -Path $SourceDir | Out-Null }
+# Step 4: Build local path (source/<srcfile>/ so putsrc knows where it goes back)
+$SourceDir = Join-Path (Join-Path (Resolve-Path $LocalDir) "source") $File.ToLower()
+if (-not (Test-Path $SourceDir)) { New-Item -ItemType Directory -Path $SourceDir -Force | Out-Null }
 $LocalPath = Join-Path $SourceDir "$Member.$Extension"
 Write-Host "LOG Local path: $LocalPath"
 

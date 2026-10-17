@@ -171,7 +171,7 @@ ibmi_ai/
 │   ├── md_to_pdf.py            # Markdown → PDF converter (needs fpdf2)
 │   ├── .ibmi-config.json       # Local config (gitignored, created by setup)
 │   └── README.md               # Detailed script documentation
-├── source/                     # Working source files (downloaded/edited here)
+├── source/                     # Working source files, one folder per source file (e.g. source/qrpglesrc/)
 ├── production_source/          # Production source reference (read-only)
 │   └── ilesrc/                 # ILE source members (.rpgle, .sqlrpgle, .clle, .dspf, .pf, .lf, etc.)
 ├── documentation/              # Project documentation and design docs

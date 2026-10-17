@@ -93,7 +93,7 @@ pwsh -ExecutionPolicy Bypass -File bin/setup-ibmi.ps1 -Environment dev
 
 ## Downloading Source (`cpysrc.ps1`)
 
-Downloads a source member from IBM i to the local `source/` directory with the correct file extension (e.g., `.rpgle`, `.sqlrpgle`, `.clle`).
+Downloads a source member from IBM i to `source/<srcfile>/` (the source file name in lowercase, e.g. `source/qrpglesrc/MYPGM.rpgle`) with the correct file extension (e.g., `.rpgle`, `.sqlrpgle`, `.clle`). The folder records which source file the member belongs to, so `putsrc` can put it back.
 
 ```powershell
 # Download using the default environment
@@ -120,7 +120,7 @@ pwsh -ExecutionPolicy Bypass -File bin/cpysrc.ps1 MYPGM -Library MYLIB -File ILE
 
 ## Uploading Source (`putsrc.ps1`)
 
-Uploads a local source file from the `source/` directory to IBM i. The script finds the file by member name, determines the source type from the file extension, and sets it on the member.
+Uploads a local source file from `source/<srcfile>/` to IBM i. The script finds the file by member name and uses its folder name as the target source file (`-File` overrides this and limits the search to that folder). Files left directly in `source/` still work and go to the configured file. The source type comes from the file extension and is set on the member. If the member exists in more than one folder, pass `-File` to choose.
 
 ```powershell
 # Upload using the default environment

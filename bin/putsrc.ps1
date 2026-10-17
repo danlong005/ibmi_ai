@@ -49,7 +49,6 @@ if (-not $PSBoundParameters.ContainsKey('IBMiUser'))     { $IBMiUser     = $Conf
 if (-not $PSBoundParameters.ContainsKey('IBMiPassword')) { $IBMiPassword = $DecryptedPassword }
 if (-not $PSBoundParameters.ContainsKey('SSHPort'))      { $SSHPort      = if ($Config.SSHPort) { $Config.SSHPort } else { 22 } }
 if (-not $PSBoundParameters.ContainsKey('Library'))      { $Library      = $Config.Library }
-if (-not $PSBoundParameters.ContainsKey('File'))         { $File         = $Config.File }
 
 # Helper: run a command on IBM i via plink
 function Invoke-Remote {
@@ -60,17 +59,32 @@ function Invoke-Remote {
 # Find the file in the source directory by member name
 $Member = $Member.ToUpper()
 $SourceDir = Join-Path (Resolve-Path $LocalDir) "source"
-$Match = Get-ChildItem -Path $SourceDir -Filter "$Member.*" -File -ErrorAction SilentlyContinue
 
-if (-not $Match) {
+# Look for MEMBER.* in source/<srcfile>/. The folder name is the source file
+# unless -File was given; fall back to a flat source/MEMBER.* with the config file.
+$FileGiven = $PSBoundParameters.ContainsKey('File')
+if ($FileGiven) {
+    $Match = @(Get-ChildItem -Path (Join-Path $SourceDir $File.ToLower()) -Filter "$Member.*" -File -ErrorAction SilentlyContinue)
+} else {
+    $Match = @(Get-ChildItem -Path $SourceDir -Directory -ErrorAction SilentlyContinue |
+        ForEach-Object { Get-ChildItem -Path $_.FullName -Filter "$Member.*" -File })
+}
+if ($Match.Count -eq 0) {
+    $Match = @(Get-ChildItem -Path $SourceDir -Filter "$Member.*" -File -ErrorAction SilentlyContinue)
+    if ($Match.Count -gt 0 -and -not $FileGiven) { $File = $Config.File }
+}
+
+if ($Match.Count -eq 0) {
     Write-Host "ERROR: No file found for member $Member in $SourceDir"
     exit 1
 }
 if ($Match.Count -gt 1) {
-    Write-Host "ERROR: Multiple files found for member $Member in $SourceDir"
-    $Match | ForEach-Object { Write-Host "  $_" }
+    Write-Host "ERROR: Multiple files found for member $Member in $SourceDir (use -File to pick the source file)"
+    $Match | ForEach-Object { Write-Host "  $($_.FullName)" }
     exit 1
 }
+$Match = $Match[0]
+if (-not $File) { $File = $Match.Directory.Name.ToUpper() }
 
 $LocalPath = $Match.FullName
 $Extension = $Match.Extension.TrimStart('.').ToLower()

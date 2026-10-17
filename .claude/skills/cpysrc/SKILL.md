@@ -6,7 +6,7 @@ allowed-tools: Bash
 argument-hint: <MEMBER> [-e environment] [-l library] [-f srcfile]
 ---
 
-Download a source member from IBM i. The script retrieves the source type attribute, copies the member to an IFS stream file, and downloads it locally to the `source/` directory with the correct file extension.
+Download a source member from IBM i. The script retrieves the source type attribute, copies the member to an IFS stream file, and downloads it locally to `source/<srcfile>/` (lowercase source file name, e.g. `source/qrpglesrc/MATH.rpgle`) with the correct file extension.
 
 ## Platform
 

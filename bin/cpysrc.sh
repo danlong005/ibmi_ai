@@ -219,8 +219,9 @@ run_remote "mkdir -p ${HOME_DIR}/source"
 REMOTE_STREAM="${HOME_DIR}/source/${MEMBER}.${EXTENSION}"
 echo "LOG Remote IFS path: $REMOTE_STREAM"
 
-# Step 4: Build local path
-SOURCE_DIR="$(cd "$LOCAL_DIR" && pwd)/source"
+# Step 4: Build local path (source/<srcfile>/ so putsrc knows where it goes back)
+FILE_DIR=$(echo "$FILE" | tr '[:upper:]' '[:lower:]')
+SOURCE_DIR="$(cd "$LOCAL_DIR" && pwd)/source/${FILE_DIR}"
 mkdir -p "$SOURCE_DIR"
 LOCAL_PATH="${SOURCE_DIR}/${MEMBER}.${EXTENSION}"
 echo "LOG Local path: $LOCAL_PATH"

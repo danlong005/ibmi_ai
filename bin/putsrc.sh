@@ -83,7 +83,8 @@ CONFIG=$(echo "$ROOT_CONFIG" | jq ".Environments[\"$ENV_NAME\"]")
 [[ -z "$IBMI_USER" ]] && IBMI_USER=$(echo "$CONFIG" | jq -r '.IBMiUser')
 [[ -z "$SSH_PORT" ]]  && SSH_PORT=$(echo "$CONFIG" | jq -r '.SSHPort // 22')
 [[ -z "$LIBRARY" ]]   && LIBRARY=$(echo "$CONFIG" | jq -r '.Library')
-[[ -z "$FILE" ]]      && FILE=$(echo "$CONFIG" | jq -r '.File')
+FILE_GIVEN=false
+[[ -n "$FILE" ]] && FILE_GIVEN=true
 HOME_DIR=$(echo "$CONFIG" | jq -r '.HomeDir')
 
 # Resolve password: CLI > config (encrypted) > prompt
@@ -169,9 +170,21 @@ trap cleanup EXIT
 MEMBER=$(echo "$MEMBER" | tr '[:lower:]' '[:upper:]')
 SOURCE_DIR="$(cd "$LOCAL_DIR" && pwd)/source"
 
-# Look for MEMBER.* in source dir
+# Look for MEMBER.* in source/<srcfile>/. The folder name is the source file
+# unless -f was given; fall back to a flat source/MEMBER.* with the config file.
 shopt -s nullglob
-MATCHES=("$SOURCE_DIR"/${MEMBER}.*)
+if $FILE_GIVEN; then
+    FILE_DIR=$(echo "$FILE" | tr '[:upper:]' '[:lower:]')
+    MATCHES=("$SOURCE_DIR/$FILE_DIR"/${MEMBER}.*)
+else
+    MATCHES=("$SOURCE_DIR"/*/${MEMBER}.*)
+fi
+if [[ ${#MATCHES[@]} -eq 0 ]]; then
+    MATCHES=("$SOURCE_DIR"/${MEMBER}.*)
+    if [[ ${#MATCHES[@]} -gt 0 ]] && ! $FILE_GIVEN; then
+        FILE=$(echo "$CONFIG" | jq -r '.File')
+    fi
+fi
 shopt -u nullglob
 
 if [[ ${#MATCHES[@]} -eq 0 ]]; then
@@ -179,12 +192,15 @@ if [[ ${#MATCHES[@]} -eq 0 ]]; then
     exit 1
 fi
 if [[ ${#MATCHES[@]} -gt 1 ]]; then
-    echo "ERROR: Multiple files found for member $MEMBER in $SOURCE_DIR"
+    echo "ERROR: Multiple files found for member $MEMBER in $SOURCE_DIR (use -f to pick the source file)"
     for f in "${MATCHES[@]}"; do echo "  $f"; done
     exit 1
 fi
 
 LOCAL_PATH="${MATCHES[0]}"
+if [[ -z "$FILE" ]]; then
+    FILE=$(basename "$(dirname "$LOCAL_PATH")" | tr '[:lower:]' '[:upper:]')
+fi
 FILENAME=$(basename "$LOCAL_PATH")
 EXTENSION="${FILENAME##*.}"
 EXTENSION_LOWER=$(echo "$EXTENSION" | tr '[:upper:]' '[:lower:]')

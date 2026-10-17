@@ -67,7 +67,7 @@ bash bin/run-tests.sh MBRNAME_T -e dev
 
 ### Directory Layout
 
-- **`source/`** — Working directory for downloaded/edited source files (gitignored)
+- **`source/`** — Working directory for downloaded/edited source files (gitignored), organised as `source/<srcfile>/MEMBER.ext` (lowercase source file name, e.g. `source/qrpglesrc/MATH.rpgle`). `putsrc` uploads to the source file named by the folder
 - **`production_source/ilesrc/`** — Read-only production source reference (~24,000 files, gitignored)
 - **`bin/`** — PowerShell (`.ps1`) and Bash (`.sh`) tooling: `setup-ibmi`, `cpysrc`, `putsrc`, `compile-pgm`, `compile-cl`, `compile-dspf`, `compile-srvpgm`, `compile-tst`, `run-tests`, `run-cl`, `get-zip`
 - **`documentation/`** — Project planning docs (contents gitignored; local only)
